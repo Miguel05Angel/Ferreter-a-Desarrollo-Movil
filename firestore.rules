@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // SOLO PARA DESARROLLO / PROYECTO DE CLASE:
+    // permite leer y escribir a cualquiera. Antes de publicar la app
+    // hay que cerrar esto con Firebase Authentication.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

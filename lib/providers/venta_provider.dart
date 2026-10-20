@@ -1,11 +1,41 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
-import '../data/mock_data.dart';
+import '../data/firestore_mappers.dart';
 import '../data/models/venta.dart';
+import '../services/firestore_service.dart';
 
 class VentaProvider extends ChangeNotifier {
-  final List<Venta> _ventas = List.of(MockData.ventas);
+  final FirestoreService _fs = FirestoreService.instance;
+
+  List<Venta> _ventas = [];
+  StreamSubscription<List<Venta>>? _sub;
+  bool cargando = true;
+  String? error;
+
+  VentaProvider() {
+    _sub = _fs
+        .escuchar<Venta>(FirestoreService.colVentas, Mapeadores.ventaDesde)
+        .listen((lista) {
+      _ventas = List.of(lista);
+      cargando = false;
+      error = null;
+      notifyListeners();
+    }, onError: (Object e) {
+      cargando = false;
+      error = e.toString();
+      debugPrint('❌ Firestore [ventas]: $e');
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
 
   List<Venta> get ventas =>
       List.unmodifiable(_ventas..sort((a, b) => b.fecha.compareTo(a.fecha)));
@@ -55,6 +85,8 @@ class VentaProvider extends ChangeNotifier {
 
     _ventas.add(venta);
     notifyListeners();
+    unawaited(_fs.crear(
+        FirestoreService.colVentas, venta.id, Mapeadores.ventaAMapa(venta)));
     return venta;
   }
 }
