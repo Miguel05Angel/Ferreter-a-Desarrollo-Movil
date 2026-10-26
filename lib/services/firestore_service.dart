@@ -14,6 +14,10 @@ class FirestoreService {
 
   static const String databaseId = 'ferreteria-db';
 
+  /// Sube este numero cuando MockData tenga datos nuevos que deban llegar
+  /// a la base (por ejemplo, mas productos). Solo se agregan los que faltan.
+  static const int versionDatos = 3;
+
   // Colecciones
   static const String colProductos = 'productos';
   static const String colClientes = 'clientes';
@@ -33,7 +37,13 @@ class FirestoreService {
     String coleccion,
     T Function(String id, Mapa datos) desde,
   ) {
-    return db.collection(coleccion).snapshots().map((snap) {
+    return db
+        .collection(coleccion)
+        .snapshots()
+        // Un resultado vacio que viene de la memoria local no significa que la
+        // base este vacia: se ignora para no dejar la app sin datos.
+        .where((snap) => !(snap.metadata.isFromCache && snap.docs.isEmpty))
+        .map((snap) {
       debugPrint('📡 Firestore [$coleccion]: ${snap.docs.length} documentos '
           '${snap.metadata.isFromCache ? "(caché local)" : "(servidor)"}');
       final docs = snap.docs.toList()
@@ -96,11 +106,13 @@ class FirestoreService {
           .timeout(const Duration(seconds: 10));
       debugPrint('✅ Firestore CONECTADO a la base "$databaseId" '
           '(el servidor respondió)');
-      if (snap.exists) {
-        debugPrint('ℹ️ Datos iniciales ya cargados anteriormente.');
+      final version = (snap.data()?['version'] as num?)?.toInt() ??
+          (snap.exists ? 1 : 0);
+      if (version >= versionDatos) {
+        debugPrint('ℹ️ Datos iniciales al dia (version $version).');
         return;
       }
-      await _sembrar(meta);
+      await _sembrar(meta, soloFaltantes: snap.exists);
     } on TimeoutException {
       debugPrint('❌ Firestore: sin respuesta en 10 s. Revisa tu internet '
           'o que la base "$databaseId" exista.');
@@ -112,12 +124,34 @@ class FirestoreService {
     }
   }
 
-  Future<void> _sembrar(DocumentReference<Mapa> meta) async {
+  Future<Set<String>> _idsExistentes(String coleccion) async {
+    final snap = await db
+        .collection(coleccion)
+        .get(const GetOptions(source: Source.server));
+    return snap.docs.map((d) => d.id).toSet();
+  }
+
+  Future<void> _sembrar(DocumentReference<Mapa> meta,
+      {bool soloFaltantes = false}) async {
     final batch = db.batch();
     final base = DateTime.now();
     var n = 0;
+    final existentes = <String, Set<String>>{};
+    if (soloFaltantes) {
+      for (final c in [
+        colProductos,
+        colClientes,
+        colProveedores,
+        colVentas,
+        colCotizaciones,
+      ]) {
+        existentes[c] = await _idsExistentes(c);
+      }
+    }
 
     void poner(String coleccion, String id, Mapa datos) {
+      // En una actualizacion no se pisan los datos que el usuario ya tiene.
+      if (existentes[coleccion]?.contains(id) ?? false) return;
       batch.set(db.collection(coleccion).doc(id), {
         ...datos,
         // Orden estable: respeta el orden de MockData.
@@ -140,7 +174,11 @@ class FirestoreService {
     for (final c in MockData.cotizaciones) {
       poner(colCotizaciones, c.id, Mapeadores.cotizacionAMapa(c));
     }
-    batch.set(meta, {'cargadoEn': Timestamp.now(), 'documentos': n});
+    batch.set(meta, {
+      'cargadoEn': Timestamp.now(),
+      'documentos': n,
+      'version': versionDatos,
+    });
 
     await batch.commit();
     debugPrint('🌱 Firestore: datos iniciales cargados ($n documentos).');

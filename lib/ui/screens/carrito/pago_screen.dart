@@ -1,11 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dinero.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../data/models/venta.dart';
@@ -15,11 +18,11 @@ import '../../../providers/producto_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/buttons/animated_button.dart';
-import '../../widgets/carrito/carrito_flotante.dart';
 import '../../widgets/comprobante/codigos_painter.dart';
-import '../../widgets/comprobante/comprobante_view.dart';
+import '../../widgets/comprobante/comprobante_acciones.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/tilt_3d.dart';
+import '../../../core/utils/formatos.dart';
 import '../main/main_shell_screen.dart';
 
 /// Flujo de pago en tres fases: elegir metodo (con su panel propio), procesar
@@ -61,15 +64,13 @@ class _PagoScreenState extends State<PagoScreen> {
     final c = context.read<CarritoProvider>();
     _articulos = c.items.length;
     _unidades = c.items.fold<int>(0, (a, i) => a + i.cantidad);
-    _subtotal = c.subtotal;
-    _igv = _subtotal * AppConstants.igv;
-    _total = _subtotal + _igv;
-    CarritoFlotante.bloquear();
+    _subtotal = Dinero.r2(c.subtotal);
+    _igv = VentaProvider.calcularIgv(_subtotal);
+    _total = Dinero.r2(_subtotal + _igv);
   }
 
   @override
   void dispose() {
-    CarritoFlotante.desbloquear();
     super.dispose();
   }
 
@@ -90,6 +91,9 @@ class _PagoScreenState extends State<PagoScreen> {
           items: carrito.aItemsVenta(),
           metodoPago: _metodo!,
           comprobante: widget.comprobante,
+          vendedorId: context.read<AuthProvider>().usuarioActual?.id ?? '',
+          vendedor: context.read<AuthProvider>().usuarioActual?.nombre ?? '',
+          redondeo: _metodo == 'Efectivo' ? Dinero.redondeoEfectivo(_total) : 0,
         );
     context.read<ProductoProvider>().descontarStock(
           carrito.items
@@ -118,7 +122,7 @@ class _PagoScreenState extends State<PagoScreen> {
       child: PopScope(
         canPop: _fase != 1,
         child: Scaffold(
-          appBar: AppBar(
+          appBar: AppBarTaller(mostrarCarrito: false, 
             automaticallyImplyLeading: _fase != 1,
             title: Text(_fase == 2 ? 'Pago completado' : 'Pagar'),
           ),
@@ -303,7 +307,7 @@ class _PagoScreenState extends State<PagoScreen> {
       case 'Efectivo':
         return _PanelEfectivo(
           key: const ValueKey('efectivo'),
-          total: _total,
+          totalExacto: _total,
           onPagar: _pagar,
         );
       default:
@@ -1012,10 +1016,15 @@ class _TarjetaVisual extends StatelessWidget {
 // ----------------------------------------------------------- efectivo
 
 class _PanelEfectivo extends StatefulWidget {
-  final double total;
+  /// Total exacto de la venta (con centimos).
+  final double totalExacto;
   final VoidCallback onPagar;
 
-  const _PanelEfectivo({super.key, required this.total, required this.onPagar});
+  const _PanelEfectivo({
+    super.key,
+    required this.totalExacto,
+    required this.onPagar,
+  });
 
   @override
   State<_PanelEfectivo> createState() => _PanelEfectivoState();
@@ -1024,9 +1033,17 @@ class _PanelEfectivo extends StatefulWidget {
 class _PanelEfectivoState extends State<_PanelEfectivo> {
   final _recibido = TextEditingController();
 
-  double get _monto => double.tryParse(_recibido.text.replaceAll(',', '.')) ?? 0;
-  double get _vuelto => _monto - widget.total;
-  bool get _alcanza => _monto + 0.0001 >= widget.total;
+  /// Lo que realmente se cobra en efectivo (redondeado a favor del cliente).
+  double get _cobro => Dinero.totalEnEfectivo(widget.totalExacto);
+  double get _redondeo => Dinero.redondeoEfectivo(widget.totalExacto);
+
+  double get _monto =>
+      double.tryParse(_recibido.text.replaceAll(',', '.')) ?? 0;
+
+  // Se compara en centimos para evitar errores de decimales
+  bool get _alcanza => Dinero.centimos(_monto) >= Dinero.centimos(_cobro);
+  double get _vuelto => Dinero.r2(_monto - _cobro);
+  double get _faltan => Dinero.r2(_cobro - _monto);
 
   @override
   void initState() {
@@ -1041,7 +1058,8 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
   }
 
   void _poner(double v) {
-    _recibido.text = v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
+    _recibido.text =
+        v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
     _recibido.selection =
         TextSelection.collapsed(offset: _recibido.text.length);
   }
@@ -1050,19 +1068,93 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
   Widget build(BuildContext context) {
     final rapidos = <double>[
       for (final v in [50.0, 100.0, 200.0])
-        if (v >= widget.total) v,
+        if (Dinero.centimos(v) >= Dinero.centimos(_cobro)) v,
     ];
+    final vacio = _monto == 0;
 
     return _Caja(
       color: const Color(0xFF43A047),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ------------------------------------------- aviso de redondeo
+          if (_redondeo > 0) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: AppTheme.amarilloSenal.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: AppTheme.amarilloSenal.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _Mono('REDONDEO EN EFECTIVO', AppTheme.amarilloSenal),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total exacto',
+                        style: TextStyle(
+                            color: AppTheme.hueso.withOpacity(0.7),
+                            fontSize: 13),
+                      ),
+                      Text(
+                        Formatters.soles(widget.totalExacto),
+                        style: TextStyle(
+                          color: AppTheme.hueso.withOpacity(0.7),
+                          fontSize: 13,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Descuento por redondeo',
+                        style:
+                            TextStyle(color: AppTheme.hueso, fontSize: 13),
+                      ),
+                      Text(
+                        '- ${Formatters.soles(_redondeo)}',
+                        style: const TextStyle(
+                          color: AppTheme.amarilloSenal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'En efectivo el total se redondea a favor del cliente '
+                    'a multiplos de S/ 0.10 (Codigo de Proteccion y Defensa '
+                    'del Consumidor, art. 44). Con Yape, Plin o tarjeta se '
+                    'cobra el monto exacto.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: AppTheme.hueso.withOpacity(0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           const _Mono('MONTO RECIBIDO', AppTheme.hueso, grande: true),
           const SizedBox(height: 10),
           TextField(
             controller: _recibido,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [Formatos.decimal(enteros: 5)],
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
             decoration: const InputDecoration(
               prefixText: 'S/  ',
@@ -1074,7 +1166,8 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ChipRapido('EXACTO', () => _poner(widget.total)),
+              _ChipRapido('EXACTO ${Formatters.soles(_cobro)}',
+                  () => _poner(_cobro)),
               for (final v in rapidos)
                 _ChipRapido('S/ ${v.toStringAsFixed(0)}', () => _poner(v)),
             ],
@@ -1085,24 +1178,29 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: (_alcanza ? const Color(0xFF43A047) : AppTheme.danger)
+              color: (vacio
+                      ? Colors.white
+                      : (_alcanza ? const Color(0xFF43A047) : AppTheme.danger))
                   .withOpacity(0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
-                _Mono(_alcanza ? 'VUELTO' : 'FALTAN',
-                    const Color(0x99EDE8DF)),
+                _Mono(
+                  vacio
+                      ? 'TOTAL A COBRAR'
+                      : (_alcanza ? 'VUELTO' : 'FALTAN'),
+                  const Color(0x99EDE8DF),
+                ),
                 const SizedBox(height: 2),
                 Text(
-                  Formatters.soles(_monto == 0
-                      ? widget.total
-                      : _vuelto.abs()),
+                  Formatters.soles(
+                      vacio ? _cobro : (_alcanza ? _vuelto : _faltan)),
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: _monto == 0
-                        ? const Color(0x66EDE8DF)
+                    color: vacio
+                        ? AppTheme.hueso
                         : (_alcanza
                             ? const Color(0xFF66BB6A)
                             : const Color(0xFFFF6E6E)),
@@ -1113,7 +1211,7 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
           ),
           const SizedBox(height: 16),
           AnimatedButton(
-            texto: 'Cobrar ${Formatters.soles(widget.total)}',
+            texto: 'Cobrar ${Formatters.soles(_cobro)}',
             icono: Icons.payments_outlined,
             ancho: double.infinity,
             onPressed: _alcanza ? widget.onPagar : null,
@@ -1345,7 +1443,7 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
               delay: const Duration(milliseconds: 650),
               inicio: const Offset(0, 0.3),
               duracion: const Duration(milliseconds: 900),
-              child: ComprobanteView(
+              child: ComprobanteConAcciones(
                 venta: widget.venta,
                 cliente: widget.cliente,
                 vendedor: widget.vendedor,

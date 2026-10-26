@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -123,7 +125,7 @@ class _CotizacionFormScreenState extends State<CotizacionFormScreen> {
     final clientes = context.watch<ClienteProvider>().clientes;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva cotizacion')),
+      appBar: AppBarTaller(mostrarCarrito: false, subtitulo: 'Presupuesto', title: const Text('Nueva cotizacion')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(

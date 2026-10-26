@@ -1,13 +1,17 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
+import '../../../core/permisos.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/venta.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/cards/stat_card.dart';
@@ -28,14 +32,18 @@ class _VentasPageState extends State<VentasPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<VentaProvider>();
+    final permisos = Permisos.de(context);
+    final usuario = context.watch<AuthProvider>().usuarioActual;
+    final propias = provider.visiblesPara(
+        esAdmin: permisos.esAdmin, usuarioId: usuario?.id ?? '');
     final filtros = ['Todas', ...AppConstants.metodosPago];
     final lista = _filtro == 'Todas'
-        ? provider.ventas
-        : provider.ventas.where((v) => v.metodoPago == _filtro).toList();
+        ? propias
+        : propias.where((v) => v.metodoPago == _filtro).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial de ventas')),
-      body: provider.ventas.isEmpty
+      appBar: AppBarTaller(subtitulo: 'Caja', title: const Text('Historial de ventas')),
+      body: propias.isEmpty
           ? const EmptyState(
               icono: Icons.receipt_long_outlined,
               titulo: 'Sin ventas registradas',
@@ -52,8 +60,8 @@ class _VentasPageState extends State<VentasPage> {
                       children: [
                         Expanded(
                           child: StatCard(
-                            titulo: 'Ventas',
-                            valor: provider.totalVentas.toDouble(),
+                            titulo: permisos.esAdmin ? 'Ventas' : 'Mis ventas',
+                            valor: propias.length.toDouble(),
                             icono: Icons.receipt_long_outlined,
                             color: const Color(0xFF0277BD),
                           ),
@@ -62,7 +70,7 @@ class _VentasPageState extends State<VentasPage> {
                         Expanded(
                           child: StatCard(
                             titulo: 'Hoy',
-                            valor: provider.totalHoy,
+                            valor: VentaProvider.totalHoyEn(propias),
                             prefijo: 'S/ ',
                             esMoneda: true,
                             icono: Icons.today_outlined,
@@ -106,6 +114,7 @@ class _VentasPageState extends State<VentasPage> {
                             padding: const EdgeInsets.only(bottom: 10),
                             child: _Ticket(
                               venta: e.value,
+                              mostrarVendedor: permisos.esAdmin,
                               onTap: () => AppRoutes.push(
                                 context,
                                 VentaDetalleScreen(ventaId: e.value.id),
@@ -171,9 +180,14 @@ class _ChipFiltro extends StatelessWidget {
 /// punteada de corte y total a la derecha.
 class _Ticket extends StatelessWidget {
   final Venta venta;
+  final bool mostrarVendedor;
   final VoidCallback onTap;
 
-  const _Ticket({required this.venta, required this.onTap});
+  const _Ticket({
+    required this.venta,
+    required this.onTap,
+    this.mostrarVendedor = false,
+  });
 
   IconData _iconoPago(String metodo) {
     switch (metodo) {
@@ -208,8 +222,34 @@ class _Ticket extends StatelessWidget {
                 Container(width: 6, color: acento),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-                    child: Column(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.center,
+                          decoration: ShapeDecoration(
+                            color: acento.withOpacity(0.14),
+                            shape: BeveledRectangleBorder(
+                              borderRadius: const BorderRadius.only(
+                                  bottomRight: Radius.circular(14)),
+                              side: BorderSide(color: acento.withOpacity(0.5)),
+                            ),
+                          ),
+                          child: Text(
+                            venta.clienteNombre.isEmpty
+                                ? '?'
+                                : venta.clienteNombre[0].toUpperCase(),
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                                color: acento),
+                          ),
+                        ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -238,6 +278,24 @@ class _Ticket extends StatelessWidget {
                             fontSize: 11,
                             color: Colors.grey.shade600,
                           ),
+                        ),
+                        if (mostrarVendedor && venta.vendedor.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'VENDEDOR  ${venta.vendedor.toUpperCase()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 9.5,
+                                letterSpacing: 0.8,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                         ),
                       ],
                     ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../media/producto_imagen.dart';
+
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/categoria.dart';
 import '../../../data/models/producto.dart';
@@ -69,11 +71,7 @@ class ProductCard extends StatelessWidget {
                       offset: Offset(t.dx * -6, t.dy * -6),
                       child: Transform.scale(
                         scale: 1 + t.distance * 0.14,
-                        child: ProductoIlustracion(
-                          tipo: producto.tipoVisual,
-                          colorHex: producto.colorHex,
-                          size: 56,
-                        ),
+                        child: ProductoImagen(producto: producto, size: 56),
                       ),
                     ),
                   ),

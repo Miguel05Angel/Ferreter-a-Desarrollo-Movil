@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/formatos.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -82,6 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         etiqueta: 'Correo electronico',
                         icono: Icons.email_outlined,
                         controlador: _emailController,
+                        formateadores: Formatos.correo(60),
                         tipoTeclado: TextInputType.emailAddress,
                         validador: Validators.email,
                         ayuda: 'ejemplo@correo.com',
@@ -143,11 +146,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 size: 16,
                                 color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 6),
-                            Text(
-                              'Demo: admin@ferreteria.com / admin123',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: Theme.of(context).colorScheme.primary,
+                            Flexible(
+                              child: Text(
+                                'Administrador: admin@ferreteria.com / admin123\n'
+                                'Vendedor: vendedor@ferreteria.com / vendedor1',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  height: 1.45,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                               ),
                             ),
                           ],

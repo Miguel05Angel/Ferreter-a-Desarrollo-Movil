@@ -5,6 +5,8 @@ class Proveedor {
   final String telefono;
   final String direccion;
   final List<String> productos;
+  final double? latitud;
+  final double? longitud;
 
   const Proveedor({
     required this.id,
@@ -13,6 +15,8 @@ class Proveedor {
     required this.telefono,
     required this.direccion,
     this.productos = const [],
+    this.latitud,
+    this.longitud,
   });
 
   Proveedor copyWith({
@@ -22,6 +26,8 @@ class Proveedor {
     String? telefono,
     String? direccion,
     List<String>? productos,
+    double? latitud,
+    double? longitud,
   }) {
     return Proveedor(
       id: id ?? this.id,
@@ -30,6 +36,8 @@ class Proveedor {
       telefono: telefono ?? this.telefono,
       direccion: direccion ?? this.direccion,
       productos: productos ?? this.productos,
+      latitud: latitud ?? this.latitud,
+      longitud: longitud ?? this.longitud,
     );
   }
 }

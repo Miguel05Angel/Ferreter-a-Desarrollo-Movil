@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -27,7 +29,7 @@ class CotizacionesPage extends StatelessWidget {
     final provider = context.watch<CotizacionProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cotizaciones')),
+      appBar: AppBarTaller(subtitulo: 'Presupuestos', title: const Text('Cotizaciones')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () =>
             AppRoutes.push(context, const CotizacionFormScreen()),

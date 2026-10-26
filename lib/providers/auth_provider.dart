@@ -4,7 +4,7 @@ import '../data/mock_data.dart';
 import '../data/models/usuario.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final List<Usuario> _usuarios = [MockData.usuarioDemo];
+  final List<Usuario> _usuarios = [MockData.usuarioDemo, MockData.vendedorDemo];
   Usuario? _usuarioActual;
 
   Usuario? get usuarioActual => _usuarioActual;

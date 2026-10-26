@@ -30,7 +30,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late final Ticker _ticker;
   final ValueNotifier<int> _frame = ValueNotifier<int>(0);
   final ValueNotifier<int> _frente = ValueNotifier<int>(0);
-  late final List<Producto> _items;
+  List<Producto> _items = const [];
+  int _ultimoTotal = -1;
 
   double _rot = 0.9;
   double _vel = 3.4; // arranca girando rapido y frena hasta el reposo
@@ -45,6 +46,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void initState() {
     super.initState();
     _items = _elegir(context.read<ProductoProvider>().productos);
+    _ultimoTotal = context.read<ProductoProvider>().productos.length;
     _intro = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
@@ -98,6 +100,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Si los productos cambian (o llegaron despues), se vuelve a armar el anillo
+    final todos = context.watch<ProductoProvider>().productos;
+    if (_items.isEmpty || todos.length != _ultimoTotal) {
+      _items = _elegir(todos);
+      _ultimoTotal = todos.length;
+    }
+
     return Scaffold(
       backgroundColor: Paleta.grafito,
       body: Stack(

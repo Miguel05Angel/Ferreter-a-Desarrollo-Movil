@@ -11,7 +11,7 @@ class ItemVenta {
     required this.precioUnitario,
   });
 
-  double get subtotal => cantidad * precioUnitario;
+  double get subtotal => (cantidad * precioUnitario * 100).round() / 100;
 }
 
 class Venta {
@@ -26,6 +26,13 @@ class Venta {
   final String comprobante;
   final DateTime fecha;
 
+  /// Quien registro la venta (vacio en ventas de ejemplo antiguas).
+  final String vendedorId;
+  final String vendedor;
+
+  /// Descuento por redondeo en pagos en efectivo (0 si no aplica).
+  final double redondeo;
+
   const Venta({
     required this.id,
     required this.numero,
@@ -37,5 +44,8 @@ class Venta {
     required this.metodoPago,
     required this.comprobante,
     required this.fecha,
+    this.vendedorId = '',
+    this.vendedor = '',
+    this.redondeo = 0,
   });
 }

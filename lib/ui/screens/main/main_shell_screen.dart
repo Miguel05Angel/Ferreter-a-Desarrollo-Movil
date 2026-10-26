@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../providers/carrito_provider.dart';
-import '../../widgets/carrito/carrito_flotante.dart';
 import '../carrito/carrito_page.dart';
 import '../home/inicio_page.dart';
 import '../perfil/perfil_page.dart';
@@ -61,15 +60,11 @@ class _MainShellScreenState extends State<MainShellScreen>
     );
     ShellNavegacion.indice.value = 0;
     ShellNavegacion.indice.addListener(_alCambiarExterno);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => CarritoFlotante.activo.value = true);
   }
 
   @override
   void dispose() {
     ShellNavegacion.indice.removeListener(_alCambiarExterno);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => CarritoFlotante.activo.value = false);
     _transicion.dispose();
     super.dispose();
   }
@@ -88,8 +83,7 @@ class _MainShellScreenState extends State<MainShellScreen>
     });
     ShellNavegacion.indice.value = i;
     _transicion.forward(from: 0);
-    // En la pestana del carrito no hace falta la burbuja
-    CarritoFlotante.activo.value = i != 3;
+
   }
 
   @override

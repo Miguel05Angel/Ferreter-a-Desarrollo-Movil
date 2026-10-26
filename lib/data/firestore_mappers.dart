@@ -87,6 +87,9 @@ class Mapeadores {
         telefono: _s(m['telefono']),
         direccion: _s(m['direccion']),
         productos: _listaStr(m['productos']),
+        latitud: m['latitud'] is num ? (m['latitud'] as num).toDouble() : null,
+        longitud:
+            m['longitud'] is num ? (m['longitud'] as num).toDouble() : null,
       );
 
   static Mapa proveedorAMapa(Proveedor p) => {
@@ -95,6 +98,8 @@ class Mapeadores {
         'telefono': p.telefono,
         'direccion': p.direccion,
         'productos': p.productos,
+        'latitud': p.latitud,
+        'longitud': p.longitud,
       };
 
   // ---------------- Items (ventas y cotizaciones) ----------------
@@ -130,6 +135,8 @@ class Mapeadores {
         metodoPago: _s(m['metodoPago']),
         comprobante: _s(m['comprobante'], 'Boleta'),
         fecha: _f(m['fecha']),
+        vendedor: _s(m['vendedor']),
+        redondeo: _d(m['redondeo']),
       );
 
   static Mapa ventaAMapa(Venta v) => {
@@ -142,6 +149,8 @@ class Mapeadores {
         'metodoPago': v.metodoPago,
         'comprobante': v.comprobante,
         'fecha': Timestamp.fromDate(v.fecha),
+        'vendedor': v.vendedor,
+        'redondeo': v.redondeo,
       };
 
   // ---------------- Cotizacion ----------------

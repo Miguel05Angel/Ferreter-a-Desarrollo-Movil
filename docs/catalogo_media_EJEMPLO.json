@@ -1,0 +1,26 @@
+{
+  "generado": "2026-10-23T00:00:00Z",
+  "productos": {
+    "HER-001": {
+      "modelo3d": "ID_DEL_ARCHIVO_GLB",
+      "fotos": [
+        "ID_FOTO_01",
+        "ID_FOTO_02"
+      ],
+      "giro360": [
+        "ID_GIRO_01",
+        "ID_GIRO_02",
+        "...hasta ID_GIRO_36"
+      ]
+    },
+    "HER-002": {
+      "modelo3d": null,
+      "fotos": [
+        "ID_FOTO_01",
+        "ID_FOTO_02",
+        "ID_FOTO_03"
+      ],
+      "giro360": []
+    }
+  }
+}

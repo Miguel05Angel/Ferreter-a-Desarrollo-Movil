@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/media/producto_imagen.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/permisos.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
@@ -9,19 +12,24 @@ import '../../../data/models/producto.dart';
 import '../../../data/models/venta.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cliente_provider.dart';
+import '../../../providers/compra_provider.dart';
 import '../../../providers/producto_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/cards/category_card.dart';
+import '../../widgets/carrito/carrito_flotante.dart';
+import '../../widgets/inputs/buscador_productos.dart';
 import '../../widgets/layout/section_header.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/producto_illustration.dart';
 import '../../widgets/visual/tilt_3d.dart';
 import '../categorias/categorias_screen.dart';
+import '../compras/compras_screen.dart';
 import '../clientes/clientes_page.dart';
 import '../cotizaciones/cotizaciones_page.dart';
 import '../main/main_shell_screen.dart';
 import '../productos/producto_detalle_screen.dart';
+import '../productos/reposicion_screen.dart';
 import '../proveedores/proveedores_page.dart';
 import '../ventas/venta_detalle_screen.dart';
 
@@ -58,6 +66,10 @@ class InicioPage extends StatelessWidget {
     final clientes = context.watch<ClienteProvider>();
     final ventas = context.watch<VentaProvider>();
     final usuario = context.watch<AuthProvider>().usuarioActual;
+    final permisos = Permisos.de(context);
+    final comprasPendientes = context.watch<CompraProvider>().pendientes;
+    final misVentas = ventas.visiblesPara(
+        esAdmin: permisos.esAdmin, usuarioId: usuario?.id ?? '');
 
     final stockBajo = productos.productos.where((p) => p.stock <= 5).toList();
     final destacados = _destacados(productos.productos);
@@ -125,9 +137,35 @@ class InicioPage extends StatelessWidget {
                                         color: AppTheme.hueso,
                                       ),
                                     ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: permisos.esAdmin
+                                            ? AppTheme.amarilloSenal
+                                            : const Color(0xFF2E3A44),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        (usuario?.rol ?? 'Vendedor')
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 10,
+                                          letterSpacing: 1.6,
+                                          fontWeight: FontWeight.w900,
+                                          color: permisos.esAdmin
+                                              ? AppTheme.grafito
+                                              : AppTheme.hueso,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
+                              const BotonCarrito(),
+                              const SizedBox(width: 6),
                               Container(
                                 width: 50,
                                 height: 50,
@@ -164,12 +202,12 @@ class InicioPage extends StatelessWidget {
                                     mainAxisAlignment:
                                         MainAxisAlignment.center,
                                     children: [
-                                      const _Mono('VENTAS DE HOY',
-                                          Color(0x99EDE8DF)),
+                                      _Mono(permisos.esAdmin ? 'VENTAS DE HOY' : 'MIS VENTAS DE HOY',
+                                          const Color(0x99EDE8DF)),
                                       const SizedBox(height: 4),
                                       TweenAnimationBuilder<double>(
                                         tween:
-                                            Tween(begin: 0, end: ventas.totalHoy),
+                                            Tween(begin: 0, end: VentaProvider.totalHoyEn(misVentas)),
                                         duration:
                                             const Duration(milliseconds: 1500),
                                         curve: Curves.easeOutCubic,
@@ -234,6 +272,13 @@ class InicioPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ============================================ buscador
+                const SizedBox(height: 20),
+                const FadeSlide(
+                  delay: Duration(milliseconds: 200),
+                  child: BuscadorProductos(),
+                ),
+
                 // ============================================ destacados
                 if (destacados.isNotEmpty) ...[
                   SectionHeader(
@@ -324,13 +369,24 @@ class InicioPage extends StatelessWidget {
                       onTap: () =>
                           AppRoutes.push(context, const ClientesPage()),
                     ),
-                    _Acceso(
-                      icono: Icons.local_shipping_outlined,
-                      texto: 'Proveedores',
-                      color: const Color(0xFF0277BD),
-                      onTap: () =>
-                          AppRoutes.push(context, const ProveedoresPage()),
-                    ),
+                    if (permisos.puedeVerProveedores)
+                      _Acceso(
+                        icono: Icons.local_shipping_outlined,
+                        texto: 'Proveedores',
+                        color: const Color(0xFF0277BD),
+                        onTap: () =>
+                            AppRoutes.push(context, const ProveedoresPage()),
+                      ),
+                    if (permisos.puedeSolicitarReposicion)
+                      _Acceso(
+                        icono: Icons.inventory_outlined,
+                        texto: comprasPendientes > 0
+                            ? 'Compras ($comprasPendientes)'
+                            : 'Compras',
+                        color: const Color(0xFF00897B),
+                        onTap: () =>
+                            AppRoutes.push(context, const ComprasScreen()),
+                      ),
                     _Acceso(
                       icono: Icons.request_quote_outlined,
                       texto: 'Cotizaciones',
@@ -349,7 +405,7 @@ class InicioPage extends StatelessWidget {
                     onAccion: () => ShellNavegacion.irA(1),
                   ),
                   SizedBox(
-                    height: 218,
+                    height: 262,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.only(right: 4),
@@ -360,6 +416,11 @@ class InicioPage extends StatelessWidget {
                         inicio: const Offset(0.35, 0),
                         child: _TarjetaAlerta(
                           producto: stockBajo[i],
+                          puedeReponer: permisos.puedeSolicitarReposicion,
+                          onReponer: () => AppRoutes.push(
+                            context,
+                            ReposicionScreen(productoId: stockBajo[i].id),
+                          ),
                           onTap: () => AppRoutes.push(
                             context,
                             ProductoDetalleScreen(productoId: stockBajo[i].id),
@@ -376,7 +437,7 @@ class InicioPage extends StatelessWidget {
                   textoAccion: 'Ver todo',
                   onAccion: () => ShellNavegacion.irA(2),
                 ),
-                if (ventas.ventas.isEmpty)
+                if (misVentas.isEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text('Aun no hay ventas registradas.',
@@ -386,7 +447,7 @@ class InicioPage extends StatelessWidget {
                   FadeSlide(
                     inicio: const Offset(0, 0.2),
                     child: _LibroVentas(
-                      ventas: ventas.ventas.take(4).toList(),
+                      ventas: misVentas.take(4).toList(),
                       onTap: (v) => AppRoutes.push(
                         context,
                         VentaDetalleScreen(ventaId: v.id),
@@ -529,12 +590,7 @@ class _TarjetaDestacado extends StatelessWidget {
                           offset: Offset(t.dx * -9, t.dy * -9),
                           child: Transform.scale(
                             scale: 1 + t.distance * 0.12,
-                            child: ProductoEstatico(
-                              tipo: producto.tipoVisual,
-                              colorHex: producto.colorHex,
-                              size: 100,
-                              sombra: true,
-                            ),
+                            child: ProductoImagen(producto: producto, size: 100, sombra: true),
                           ),
                         ),
                       ),
@@ -658,9 +714,16 @@ class _Acceso extends StatelessWidget {
 /// un halo rojo y un medidor segmentado del stock que queda.
 class _TarjetaAlerta extends StatelessWidget {
   final Producto producto;
+  final bool puedeReponer;
+  final VoidCallback onReponer;
   final VoidCallback onTap;
 
-  const _TarjetaAlerta({required this.producto, required this.onTap});
+  const _TarjetaAlerta({
+    required this.producto,
+    required this.puedeReponer,
+    required this.onReponer,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -737,12 +800,7 @@ class _TarjetaAlerta extends StatelessWidget {
                         ),
                         Transform.translate(
                           offset: Offset(t.dx * -8, t.dy * -8),
-                          child: ProductoEstatico(
-                            tipo: producto.tipoVisual,
-                            colorHex: producto.colorHex,
-                            size: 78,
-                            sombra: true,
-                          ),
+                          child: ProductoImagen(producto: producto, size: 78, sombra: true),
                         ),
                       ],
                     ),
@@ -795,6 +853,51 @@ class _TarjetaAlerta extends StatelessWidget {
                             color: rojo,
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        if (puedeReponer)
+                          GestureDetector(
+                            onTap: onReponer,
+                            child: Container(
+                              width: double.infinity,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 9),
+                              decoration: const ShapeDecoration(
+                                color: AppTheme.primary,
+                                shape: BeveledRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                      bottomRight: Radius.circular(10)),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.local_shipping_outlined,
+                                      size: 15, color: AppTheme.grafito),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'SOLICITAR REPOSICION',
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 9.5,
+                                      letterSpacing: 0.6,
+                                      fontWeight: FontWeight.w900,
+                                      color: AppTheme.grafito,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          const Text(
+                            'AVISA AL ADMINISTRADOR',
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 9,
+                              letterSpacing: 0.8,
+                              color: Color(0x80EDE8DF),
+                            ),
+                          ),
                       ],
                     ),
                   ),

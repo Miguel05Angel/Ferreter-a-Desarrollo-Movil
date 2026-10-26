@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/media/producto_imagen.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dinero.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../providers/carrito_provider.dart';
 import '../../../providers/cliente_provider.dart';
 import '../../../providers/producto_provider.dart';
+import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/chips/selector_opciones.dart';
 import '../../widgets/feedback/confirm_dialog.dart';
 import '../../widgets/feedback/empty_state.dart';
 import '../../widgets/inputs/quantity_selector.dart';
+import '../../widgets/inputs/selector_cliente.dart';
 import '../../widgets/layout/section_header.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/producto_illustration.dart';
@@ -73,11 +80,15 @@ class _CarritoPageState extends State<CarritoPage> {
     final carrito = context.watch<CarritoProvider>();
     final clientes = context.watch<ClienteProvider>();
     final categorias = context.read<ProductoProvider>();
-    final igv = carrito.subtotal * AppConstants.igv;
+    final subtotalR = Dinero.r2(carrito.subtotal);
+    final igv = VentaProvider.calcularIgv(subtotalR);
+    final totalR = Dinero.r2(subtotalR + igv);
     final unidades = carrito.items.fold<int>(0, (a, i) => a + i.cantidad);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarTaller(
+        mostrarCarrito: false,
+        subtitulo: 'Punto de venta',
         title: const Text('Nueva venta'),
         actions: [
           if (!carrito.vacio)
@@ -133,26 +144,9 @@ class _CarritoPageState extends State<CarritoPage> {
 
                 // ------------------------------------------ cliente
                 const SectionHeader(titulo: 'Cliente'),
-                DropdownButtonFormField<String>(
-                  initialValue: _clienteId,
-                  isExpanded: true,
-                  hint: const Text('Publico en general'),
-                  decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.person_outline)),
-                  items: [
-                    const DropdownMenuItem(
-                        value: null, child: Text('Publico en general')),
-                    ...clientes.clientes.map(
-                      (c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(
-                          '${c.nombre}  (${c.tipoDocumento})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _clienteId = v),
+                SelectorCliente(
+                  clienteId: _clienteId,
+                  onCambio: (v) => setState(() => _clienteId = v),
                 ),
 
                 // ------------------------------------- comprobante
@@ -216,7 +210,7 @@ class _CarritoPageState extends State<CarritoPage> {
                               _FilaTotal('Unidades llevadas', '$unidades'),
                               const SizedBox(height: 8),
                               _FilaTotal('Subtotal',
-                                  Formatters.soles(carrito.subtotal)),
+                                  Formatters.soles(subtotalR)),
                               const SizedBox(height: 8),
                               _FilaTotal('IGV (18%)', Formatters.soles(igv)),
                               const SizedBox(height: 14),
@@ -224,7 +218,7 @@ class _CarritoPageState extends State<CarritoPage> {
                               const SizedBox(height: 14),
                               _FilaTotal(
                                 'Total para pagar',
-                                Formatters.soles(carrito.subtotal + igv),
+                                Formatters.soles(totalR),
                                 destacado: true,
                               ),
                             ],
@@ -236,7 +230,7 @@ class _CarritoPageState extends State<CarritoPage> {
                 ),
                 const SizedBox(height: 22),
                 AnimatedButton(
-                  texto: 'Pagar ${Formatters.soles(carrito.subtotal + igv)}',
+                  texto: 'Pagar ${Formatters.soles(totalR)}',
                   icono: Icons.payments_outlined,
                   ancho: double.infinity,
                   onPressed: _irAPagar,
@@ -288,11 +282,7 @@ class _LineaPedido extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ProductoIlustracion(
-                    tipo: p.tipoVisual,
-                    colorHex: p.colorHex,
-                    size: 46,
-                  ),
+                  child: ProductoImagen(producto: p, size: 46),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

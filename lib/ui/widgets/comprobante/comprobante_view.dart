@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../data/models/venta.dart';
 import 'codigos_painter.dart';
+import 'comprobante_datos.dart';
 import 'numero_a_letras.dart';
 
 /// Comprobante electronico (boleta o factura) con aspecto de papel
@@ -255,6 +257,13 @@ class ComprobanteView extends StatelessWidget {
                   ],
                 ),
               ),
+              if (venta.redondeo > 0) ...[
+                const SizedBox(height: 8),
+                _Total('REDONDEO (EFECTIVO)',
+                    '- ${Formatters.soles(venta.redondeo)}'),
+                _Total('COBRADO EN EFECTIVO',
+                    Formatters.soles(venta.total - venta.redondeo)),
+              ],
               const SizedBox(height: 10),
               Text(
                 'SON: ${montoEnLetras(venta.total)}',
@@ -276,16 +285,17 @@ class ComprobanteView extends StatelessWidget {
                     decoration: BoxDecoration(
                       border: Border.all(color: const Color(0xFFCFC9BC)),
                     ),
-                    child: SizedBox(
-                      width: 96,
-                      height: 96,
-                      child: CustomPaint(
-                        painter: QrIlustrativoPainter(
-                          semilla:
-                              '${AppConstants.rucFerreteria}|${venta.numero}|${venta.total}',
-                          color: _tinta,
-                        ),
-                      ),
+                    child: QrImageView(
+                      data: qrSunat(venta, cliente),
+                      version: QrVersions.auto,
+                      size: 96,
+                      padding: EdgeInsets.zero,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square, color: _tinta),
+                      dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: _tinta),
                     ),
                   ),
                   const SizedBox(width: 12),

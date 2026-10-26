@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/permisos.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -48,22 +52,18 @@ class _ProductosPageState extends State<ProductosPage> {
     final filtrados = _filtrar(provider.productos);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarTaller(
         title: const Text('Productos'),
-        actions: [
-          IconButton(
-            tooltip: 'Agregar producto',
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: () =>
-                AppRoutes.push(context, const ProductoFormScreen()),
-          ),
-        ],
+        subtitulo: 'Catalogo',
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => AppRoutes.push(context, const ProductoFormScreen()),
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo'),
-      ),
+      floatingActionButton: Permisos.de(context).puedeGestionarProductos
+          ? FloatingActionButton.extended(
+              onPressed: () =>
+                  AppRoutes.push(context, const ProductoFormScreen()),
+              icon: const Icon(Icons.add),
+              label: const Text('NUEVO'),
+            )
+          : null,
       body: Column(
         children: [
           // Buscador

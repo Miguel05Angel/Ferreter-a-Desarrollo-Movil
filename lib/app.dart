@@ -10,6 +10,8 @@ import 'providers/cotizacion_provider.dart';
 import 'providers/producto_provider.dart';
 import 'providers/proveedor_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/compra_provider.dart';
+import 'providers/media_provider.dart';
 import 'providers/venta_provider.dart';
 import 'ui/widgets/carrito/carrito_flotante.dart';
 
@@ -28,6 +30,8 @@ class FerreteriaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CarritoProvider()),
         ChangeNotifierProvider(create: (_) => VentaProvider()),
         ChangeNotifierProvider(create: (_) => CotizacionProvider()),
+        ChangeNotifierProvider(create: (_) => MediaProvider()..cargar()),
+        ChangeNotifierProvider(create: (_) => CompraProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
@@ -40,12 +44,6 @@ class FerreteriaApp extends StatelessWidget {
             themeMode: themeProvider.themeMode,
             initialRoute: AppRoutes.splash,
             onGenerateRoute: AppRoutes.onGenerateRoute,
-            builder: (context, child) => Stack(
-              children: [
-                child ?? const SizedBox.shrink(),
-                const CarritoFlotante(),
-              ],
-            ),
           );
         },
       ),

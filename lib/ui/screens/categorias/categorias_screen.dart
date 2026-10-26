@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -14,7 +16,7 @@ class CategoriasScreen extends StatelessWidget {
     final provider = context.watch<ProductoProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Categorias')),
+      appBar: AppBarTaller(subtitulo: 'Clasificacion', title: const Text('Categorias')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: provider.categorias.length,
