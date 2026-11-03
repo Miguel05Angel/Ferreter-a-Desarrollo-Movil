@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,249 +9,224 @@ import '../../../providers/carrito_provider.dart';
 import '../../screens/main/main_shell_screen.dart';
 import '../visual/producto_illustration.dart';
 
-/// Llave del navegador principal: permite que el carrito flotante (que vive
-/// por encima de todas las pantallas) navegue.
+/// Llave del navegador principal.
 final GlobalKey<NavigatorState> navegadorGlobal = GlobalKey<NavigatorState>();
 
-/// Carrito flotante: burbuja que se puede arrastrar y que se pega al borde
-/// de la pantalla. Muestra cuantos articulos hay y el total, y rebota cuando
-/// un producto "aterriza" en ella.
-class CarritoFlotante extends StatefulWidget {
-  const CarritoFlotante({super.key});
-
-  /// El shell lo activa cuando el usuario ya esta dentro de la tienda.
-  static final ValueNotifier<bool> activo = ValueNotifier<bool>(false);
-
-  /// Pantallas que necesitan ocultarlo temporalmente (por ejemplo el pago).
-  static final ValueNotifier<int> bloqueos = ValueNotifier<int>(0);
+/// Registro de los botones de carrito que hay en pantalla. El producto que
+/// "vuela" al carrito apunta al boton visible en ese momento.
+class CarritoFlotante {
+  CarritoFlotante._();
 
   /// Se incrementa cada vez que un producto llega al carrito.
   static final ValueNotifier<int> rebote = ValueNotifier<int>(0);
 
-  /// Para ubicar la burbuja en pantalla y apuntar la animacion de vuelo.
-  static final GlobalKey llave = GlobalKey();
+  static final List<GlobalKey> _claves = [];
 
-  static void bloquear() {
-    WidgetsBinding.instance.addPostFrameCallback((_) => bloqueos.value++);
+  static GlobalKey registrar() {
+    final k = GlobalKey();
+    _claves.add(k);
+    return k;
   }
 
-  static void desbloquear() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (bloqueos.value > 0) bloqueos.value--;
-    });
-  }
+  static void liberar(GlobalKey k) => _claves.remove(k);
 
-  @override
-  State<CarritoFlotante> createState() => _CarritoFlotanteState();
+  /// Centro (en pantalla) del boton de carrito visible, o null si no hay.
+  static Offset? destino() {
+    for (final k in _claves.reversed) {
+      final ctx = k.currentContext;
+      if (ctx == null) continue;
+      if (!TickerMode.of(ctx)) continue; // pestanas ocultas
+      final ruta = ModalRoute.of(ctx);
+      if (ruta != null && !ruta.isCurrent) continue; // pantallas tapadas
+      final caja = ctx.findRenderObject();
+      if (caja is RenderBox && caja.hasSize && caja.attached) {
+        return caja.localToGlobal(caja.size.center(Offset.zero));
+      }
+    }
+    return null;
+  }
 }
 
-class _CarritoFlotanteState extends State<CarritoFlotante>
-    with SingleTickerProviderStateMixin {
-  static const double _tam = 64;
+/// Boton de carrito para barras superiores y cabeceras. Muestra cuantas
+/// unidades hay y el total; cuando llega un producto vuela hacia el, rebota,
+/// se sacude y suelta un "+1".
+class BotonCarrito extends StatefulWidget {
+  const BotonCarrito({super.key});
 
+  @override
+  State<BotonCarrito> createState() => _BotonCarritoState();
+}
+
+class _BotonCarritoState extends State<BotonCarrito>
+    with SingleTickerProviderStateMixin {
+  late final GlobalKey _llave = CarritoFlotante.registrar();
   late final AnimationController _pulso;
-  Offset? _pos;
-  bool _arrastrando = false;
 
   @override
   void initState() {
     super.initState();
     _pulso = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 650));
+        vsync: this, duration: const Duration(milliseconds: 900));
     CarritoFlotante.rebote.addListener(_alRebotar);
   }
 
   @override
   void dispose() {
     CarritoFlotante.rebote.removeListener(_alRebotar);
+    CarritoFlotante.liberar(_llave);
     _pulso.dispose();
     super.dispose();
   }
 
-  void _alRebotar() => _pulso.forward(from: 0);
+  void _alRebotar() {
+    // Solo reacciona el boton que esta a la vista
+    final ctx = _llave.currentContext;
+    if (ctx == null || !TickerMode.of(ctx)) return;
+    _pulso.forward(from: 0);
+  }
 
   void _irAlCarrito() {
-    navegadorGlobal.currentState?.popUntil((r) => r.isFirst);
+    Navigator.of(context).popUntil((r) => r.isFirst);
     ShellNavegacion.irA(3);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<bool>(
-      valueListenable: CarritoFlotante.activo,
-      builder: (context, activo, _) => ValueListenableBuilder<int>(
-        valueListenable: CarritoFlotante.bloqueos,
-        builder: (context, bloqueos, __) {
-          final visible = activo && bloqueos == 0;
-          return LayoutBuilder(
-            builder: (context, c) {
-              final mq = MediaQuery.of(context);
-              final minY = mq.padding.top + 12;
-              final maxY = c.maxHeight - mq.padding.bottom - 66 - _tam - 14;
-              final maxX = c.maxWidth - _tam - 12;
-
-              _pos ??= Offset(maxX, c.maxHeight * 0.52);
-              final pos = Offset(
-                _pos!.dx.clamp(12.0, maxX).toDouble(),
-                _pos!.dy.clamp(minY, math.max(minY, maxY)).toDouble(),
-              );
-
-              return Stack(
-                children: [
-                  AnimatedPositioned(
-                    duration: _arrastrando
-                        ? Duration.zero
-                        : const Duration(milliseconds: 380),
-                    curve: Curves.easeOutBack,
-                    left: pos.dx,
-                    top: pos.dy,
-                    width: _tam,
-                    height: _tam + 32,
-                    child: IgnorePointer(
-                      ignoring: !visible,
-                      child: AnimatedScale(
-                        scale: visible ? 1 : 0,
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeOutBack,
-                        child: GestureDetector(
-                          onTap: _irAlCarrito,
-                          onPanStart: (_) =>
-                              setState(() => _arrastrando = true),
-                          onPanUpdate: (d) =>
-                              setState(() => _pos = pos + d.delta),
-                          onPanEnd: (_) {
-                            final alIzq = (pos.dx + _tam / 2) < c.maxWidth / 2;
-                            setState(() {
-                              _arrastrando = false;
-                              _pos = Offset(alIzq ? 12 : maxX, pos.dy);
-                            });
-                          },
-                          child: _Burbuja(pulso: _pulso),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _Burbuja extends StatelessWidget {
-  final Animation<double> pulso;
-
-  const _Burbuja({required this.pulso});
-
-  @override
-  Widget build(BuildContext context) {
     final carrito = context.watch<CarritoProvider>();
+    final unidades = carrito.items.fold<int>(0, (a, i) => a + i.cantidad);
     final total = carrito.subtotal * 1.18;
-    final cantidad = carrito.items.fold<int>(0, (a, i) => a + i.cantidad);
+    final lleno = unidades > 0;
 
-    return Material(
-      type: MaterialType.transparency,
-      child: AnimatedBuilder(
-        animation: pulso,
-        builder: (context, child) {
-          final v = Curves.elasticOut.transform(pulso.value);
-          final escala = pulso.isAnimating || pulso.value > 0
-              ? 1 + 0.32 * (1 - v)
-              : 1.0;
-          return Transform.scale(scale: escala, child: child);
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
+    return GestureDetector(
+      onTap: _irAlCarrito,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: AnimatedBuilder(
+          animation: _pulso,
+          builder: (context, child) {
+            final v = _pulso.value;
+            final rebote = Curves.elasticOut.transform(v);
+            final escala = v == 0 ? 1.0 : 1 + 0.30 * (1 - rebote);
+            final sacudida = v == 0 ? 0.0 : math.sin(v * 22) * 0.10 * (1 - v);
+            return Stack(
               clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
-                Container(
-                  key: CarritoFlotante.llave,
-                  width: 64,
-                  height: 64,
-                  decoration: const ShapeDecoration(
-                    color: AppTheme.grafito,
-                    shape: BeveledRectangleBorder(
-                      borderRadius:
-                          BorderRadius.only(bottomRight: Radius.circular(20)),
-                      side: BorderSide(color: AppTheme.primary, width: 2.4),
-                    ),
-                    shadows: [
-                      BoxShadow(
-                        color: Color(0x66000000),
-                        blurRadius: 14,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.shopping_cart,
-                      color: AppTheme.primary, size: 30),
-                ),
-                Positioned(
-                  right: -6,
-                  top: -6,
-                  child: AnimatedScale(
-                    scale: cantidad > 0 ? 1 : 0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.elasticOut,
-                    child: Container(
-                      constraints:
-                          const BoxConstraints(minWidth: 22, minHeight: 22),
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(color: AppTheme.grafito, width: 2),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$cantidad',
-                          style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w900,
-                              color: AppTheme.grafito),
+                // Halo que se expande al llegar el producto
+                if (v > 0)
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: (1 - v).clamp(0.0, 1.0).toDouble() * 0.7,
+                      child: Transform.scale(
+                        scale: 1 + v * 0.9,
+                        child: Container(
+                          decoration: ShapeDecoration(
+                            shape: BeveledRectangleBorder(
+                              borderRadius: const BorderRadius.only(
+                                  bottomRight: Radius.circular(12)),
+                              side: BorderSide(
+                                  color: AppTheme.primary, width: 2.5 * (1 - v)),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                Transform.rotate(
+                  angle: sacudida,
+                  child: Transform.scale(scale: escala, child: child),
+                ),
+                // +1 que sube
+                if (v > 0.05 && v < 0.95)
+                  Positioned(
+                    top: -4 - 26 * v,
+                    child: Opacity(
+                      opacity: (1 - v).clamp(0.0, 1.0).toDouble(),
+                      child: const Text(
+                        '+1',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+          child: AnimatedContainer(
+            key: _llave,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            height: 38,
+            padding: EdgeInsets.symmetric(horizontal: lleno ? 11 : 9),
+            decoration: ShapeDecoration(
+              color: lleno ? AppTheme.primary : Colors.transparent,
+              shape: BeveledRectangleBorder(
+                borderRadius:
+                    const BorderRadius.only(bottomRight: Radius.circular(12)),
+                side: BorderSide(
+                    color: AppTheme.primary, width: lleno ? 0 : 1.8),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shopping_cart,
+                    size: 20,
+                    color: lleno ? AppTheme.grafito : AppTheme.primary),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  child: lleno
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 7),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 250),
+                                transitionBuilder: (c, a) =>
+                                    ScaleTransition(scale: a, child: c),
+                                child: Text(
+                                  '$unidades',
+                                  key: ValueKey(unidades),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    height: 1.0,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.grafito,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'S/ ${total.toStringAsFixed(total >= 100 ? 0 : 1)}',
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 9,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.grafito,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const SizedBox(width: 0, height: 0),
                 ),
               ],
             ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              child: cantidad > 0
-                  ? Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'S/ ${total.toStringAsFixed(total >= 100 ? 0 : 1)}',
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.grafito,
-                        ),
-                      ),
-                    )
-                  : const SizedBox(height: 0),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Animacion del producto 3D volando hacia el carrito flotante.
+/// Animacion del producto 3D volando hacia el boton del carrito.
 class VueloAlCarrito {
   VueloAlCarrito._();
 
@@ -261,15 +237,13 @@ class VueloAlCarrito {
     required int colorHex,
     required Offset desde,
     double tam = 110,
+    String? imagenUrl,
   }) {
     final overlay = Overlay.of(context, rootOverlay: true);
-    final size = MediaQuery.of(context).size;
+    final mq = MediaQuery.of(context);
 
-    Offset hasta = Offset(size.width - 44, size.height * 0.55);
-    final caja = CarritoFlotante.llave.currentContext?.findRenderObject();
-    if (caja is RenderBox && caja.hasSize && caja.attached) {
-      hasta = caja.localToGlobal(caja.size.center(Offset.zero));
-    }
+    final hasta = CarritoFlotante.destino() ??
+        Offset(mq.size.width - 52, mq.padding.top + 32);
 
     late final OverlayEntry entrada;
     entrada = OverlayEntry(
@@ -279,6 +253,7 @@ class VueloAlCarrito {
         desde: desde,
         hasta: hasta,
         tam: tam,
+        imagenUrl: imagenUrl,
         alTerminar: () {
           entrada.remove();
           CarritoFlotante.rebote.value++;
@@ -295,6 +270,7 @@ class _Vuelo extends StatefulWidget {
   final Offset desde;
   final Offset hasta;
   final double tam;
+  final String? imagenUrl;
   final VoidCallback alTerminar;
 
   const _Vuelo({
@@ -303,6 +279,7 @@ class _Vuelo extends StatefulWidget {
     required this.desde,
     required this.hasta,
     required this.tam,
+    required this.imagenUrl,
     required this.alTerminar,
   });
 
@@ -333,14 +310,14 @@ class _VueloState extends State<_Vuelo> with SingleTickerProviderStateMixin {
   Offset _curva(double t) {
     final a = widget.desde;
     final b = widget.hasta;
-    final control = Offset((a.dx + b.dx) / 2 - 40, math.min(a.dy, b.dy) - 150);
+    final control = Offset((a.dx + b.dx) / 2 - 40, math.min(a.dy, b.dy) - 90);
     final u = 1 - t;
     return a * (u * u) + control * (2 * u * t) + b * (t * t);
   }
 
   Widget _pieza(double t, double opacidad) {
     final pos = _curva(t);
-    final escala = 1 - 0.78 * Curves.easeIn.transform(t);
+    final escala = 1 - 0.80 * Curves.easeIn.transform(t);
     final m = Matrix4.identity()
       ..setEntry(3, 2, 0.002)
       ..rotateY(t * math.pi * 3)
@@ -357,12 +334,25 @@ class _VueloState extends State<_Vuelo> with SingleTickerProviderStateMixin {
           child: Transform(
             alignment: Alignment.center,
             transform: m,
-            child: ProductoEstatico(
-              tipo: widget.tipo,
-              colorHex: widget.colorHex,
-              size: widget.tam,
-              sombra: true,
-            ),
+            child: widget.imagenUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: widget.imagenUrl!,
+                    width: widget.tam,
+                    height: widget.tam,
+                    fit: BoxFit.contain,
+                    errorWidget: (_, __, ___) => ProductoEstatico(
+                      tipo: widget.tipo,
+                      colorHex: widget.colorHex,
+                      size: widget.tam,
+                      sombra: true,
+                    ),
+                  )
+                : ProductoEstatico(
+                    tipo: widget.tipo,
+                    colorHex: widget.colorHex,
+                    size: widget.tam,
+                    sombra: true,
+                  ),
           ),
         ),
       ),
@@ -379,7 +369,6 @@ class _VueloState extends State<_Vuelo> with SingleTickerProviderStateMixin {
           final fin = _c.value > 0.88 ? (1 - _c.value) / 0.12 : 1.0;
           return Stack(
             children: [
-              // estela
               for (var k = 3; k >= 1; k--)
                 if (t - k * 0.045 > 0)
                   _pieza(t - k * 0.045, (0.22 - k * 0.05) * fin),

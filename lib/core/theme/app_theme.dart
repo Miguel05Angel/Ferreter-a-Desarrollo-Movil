@@ -163,7 +163,7 @@ class AppTheme {
             TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.8),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        indicatorColor: primary.withOpacity(0.2),
+        indicatorColor: primary.withValues(alpha: 0.2),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

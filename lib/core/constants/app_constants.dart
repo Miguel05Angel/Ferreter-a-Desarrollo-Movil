@@ -14,6 +14,12 @@ class AppConstants {
   static const String celularYapePlin = '987 654 321';
   static const String titularYapePlin = 'Ferreteria El Constructor';
 
+  // ----- Imagenes reales de los productos (Google Drive) -----
+  // Pega aqui el ID del archivo catalogo_media.json que genera el script de
+  // Drive (ver docs/GUIA_IMAGENES_REALES.md). Si queda vacio la app usa las
+  // ilustraciones 3D integradas.
+
+static const String idManifiestoMedia = '1hpLo332qZsuYuQ2Y-lgN6iGLh8PEq9uZ';
   static const double latitudFerreteria = -12.0464;
   static const double longitudFerreteria = -77.0428;
 

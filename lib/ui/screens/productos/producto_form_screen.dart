@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/formatos.dart';
+
+import '../../../core/permisos.dart';
+import '../../widgets/feedback/acceso_restringido.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
@@ -6,6 +13,7 @@ import '../../../core/utils/validators.dart';
 import '../../../data/models/producto.dart';
 import '../../../providers/producto_provider.dart';
 import '../../widgets/buttons/animated_button.dart';
+import '../../widgets/feedback/edicion_flow.dart';
 import '../../widgets/inputs/custom_text_field.dart';
 
 class ProductoFormScreen extends StatefulWidget {
@@ -25,6 +33,9 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
   late final TextEditingController _precioVenta;
   late final TextEditingController _precioCompra;
   late final TextEditingController _stock;
+  late final TextEditingController _stockMin;
+  late final TextEditingController _fuente;
+  late final TextEditingController _urlFuente;
   String? _categoriaId;
   String _unidad = AppConstants.unidades.first;
   bool _cargando = false;
@@ -46,9 +57,28 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
             ? ''
             : '${p.precioCompra}');
     _stock = TextEditingController(text: p == null ? '' : '${p.stock}');
+    _stockMin = TextEditingController(text: '${p?.stockMinimo ?? 5}');
+    _fuente = TextEditingController(text: p?.fuente ?? '');
+    _urlFuente = TextEditingController(text: p?.urlFuente ?? '');
     _categoriaId = p?.categoriaId;
     _unidad = p?.unidad ?? AppConstants.unidades.first;
+    for (final x in [
+      _codigo,
+      _nombre,
+      _descripcion,
+      _marca,
+      _precioVenta,
+      _precioCompra,
+      _stock,
+      _stockMin,
+      _fuente,
+      _urlFuente
+    ]) {
+      x.addListener(_alCambiar);
+    }
   }
+
+  void _alCambiar() => setState(() {});
 
   @override
   void dispose() {
@@ -59,7 +89,48 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
     _precioVenta.dispose();
     _precioCompra.dispose();
     _stock.dispose();
+    _stockMin.dispose();
+    _fuente.dispose();
+    _urlFuente.dispose();
     super.dispose();
+  }
+
+  List<CambioCampo> _cambios() {
+    final p = widget.producto;
+    if (p == null) return [];
+    final k = ComparadorCambios();
+    k.texto('Codigo', p.codigo, _codigo.text);
+    k.texto('Nombre', p.nombre, _nombre.text);
+    k.texto('Descripcion', p.descripcion, _descripcion.text);
+    k.texto('Marca', p.marca, _marca.text);
+    if (_categoriaId != p.categoriaId && _categoriaId != null) {
+      final prov = context.read<ProductoProvider>();
+      k.cambios.add(CambioCampo(
+        'Categoria',
+        prov.categoriaDe(p.categoriaId).nombre,
+        prov.categoriaDe(_categoriaId!).nombre,
+      ));
+    }
+    k.texto('Unidad', p.unidad, _unidad);
+    k.numero('Precio de venta', p.precioVenta, _precioVenta.text);
+    k.numero('Precio de compra', p.precioCompra, _precioCompra.text);
+    k.numero('Stock', p.stock, _stock.text, decimales: 0);
+    k.numero('Stock minimo', p.stockMinimo, _stockMin.text, decimales: 0);
+    k.texto('Fuente del precio', p.fuente, _fuente.text);
+    return k.cambios;
+  }
+
+  /// Fecha en que se verifico el precio: se conserva si no cambio nada.
+  DateTime _fechaVerificacion() {
+    final p = widget.producto;
+    final precio = double.tryParse(_precioVenta.text.trim());
+    if (p != null &&
+        p.fechaPrecio != null &&
+        p.fuente == _fuente.text.trim() &&
+        p.precioVenta == precio) {
+      return p.fechaPrecio!;
+    }
+    return DateTime.now();
   }
 
   Future<void> _guardar() async {
@@ -87,11 +158,20 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
       return;
     }
 
+    if (_esEdicion) {
+      final seguro = await EdicionFlow.confirmar(
+        context,
+        entidad: 'a este producto',
+        cambios: _cambios(),
+      );
+      if (!seguro || !mounted) return;
+    }
+
     setState(() => _cargando = true);
     await Future.delayed(const Duration(milliseconds: 700));
     if (!mounted) return;
 
-    final nuevo = Producto(
+    final base = Producto(
       id: widget.producto?.id ??
           'p-${DateTime.now().millisecondsSinceEpoch}',
       codigo: codigo,
@@ -103,7 +183,30 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
       precioVenta: double.parse(_precioVenta.text.trim()),
       precioCompra: double.tryParse(_precioCompra.text.trim()) ?? 0,
       stock: int.parse(_stock.text.trim()),
+      stockMinimo: int.tryParse(_stockMin.text.trim()) ?? 5,
+      fuente: _fuente.text.trim(),
+      urlFuente: _urlFuente.text.trim(),
+      fechaPrecio:
+          _fuente.text.trim().isEmpty ? null : _fechaVerificacion(),
     );
+    // Al editar se conservan la ilustracion 3D y los colores del producto
+    final nuevo = widget.producto == null
+        ? base
+        : widget.producto!.copyWith(
+            codigo: base.codigo,
+            nombre: base.nombre,
+            descripcion: base.descripcion,
+            categoriaId: base.categoriaId,
+            marca: base.marca,
+            unidad: base.unidad,
+            precioVenta: base.precioVenta,
+            precioCompra: base.precioCompra,
+            stock: base.stock,
+            stockMinimo: base.stockMinimo,
+            fuente: base.fuente,
+            urlFuente: base.urlFuente,
+            fechaPrecio: base.fechaPrecio,
+          );
 
     if (_esEdicion) {
       provider.actualizar(nuevo);
@@ -114,23 +217,30 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
     setState(() => _cargando = false);
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_esEdicion
-            ? 'Producto actualizado correctamente'
-            : 'Producto registrado correctamente'),
-        backgroundColor: const Color(0xFF2E7D32),
-      ),
+    await EdicionFlow.exito(
+      context,
+      titulo: _esEdicion ? 'Producto actualizado' : 'Producto registrado',
+      mensaje: _esEdicion
+          ? 'Los cambios se guardaron correctamente.'
+          : 'Se agrego a tu lista correctamente.',
     );
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!Permisos.de(context).puedeGestionarProductos) {
+      return const AccesoRestringido(
+        titulo: 'Productos',
+        detalle:
+            'Solo el Administrador puede crear, editar o eliminar productos.',
+      );
+    }
     final categorias = context.watch<ProductoProvider>().categorias;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarTaller(mostrarCarrito: false, 
         title: Text(_esEdicion ? 'Editar producto' : 'Nuevo producto'),
       ),
       body: SingleChildScrollView(
@@ -143,6 +253,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                 etiqueta: 'Codigo',
                 icono: Icons.qr_code,
                 controlador: _codigo,
+                formateadores: Formatos.codigo(10),
                 validador: Validators.codigoProducto,
                 ayuda: 'Ej: HER-001',
                 capitalizacion: TextCapitalization.characters,
@@ -152,6 +263,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                 etiqueta: 'Nombre del producto',
                 icono: Icons.label_outline,
                 controlador: _nombre,
+                formateadores: Formatos.nombre(60),
                 validador: Validators.nombre,
                 capitalizacion: TextCapitalization.sentences,
                 ayuda: 'Ej: Taladro percutor 750W',
@@ -161,6 +273,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                 etiqueta: 'Descripcion',
                 icono: Icons.description_outlined,
                 controlador: _descripcion,
+                formateadores: Formatos.texto(160),
                 validador: (v) => Validators.requerido(v, 'Ingresa una descripcion'),
                 lineas: 3,
                 capitalizacion: TextCapitalization.sentences,
@@ -170,13 +283,14 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                 etiqueta: 'Marca',
                 icono: Icons.branding_watermark_outlined,
                 controlador: _marca,
+                formateadores: Formatos.nombre(30),
                 validador: (v) => Validators.requerido(v, 'Ingresa la marca'),
                 ayuda: 'Ej: Truper',
               ),
               const SizedBox(height: 20),
 
               // Categoria
-              _Etiqueta('Categoria'),
+              const _Etiqueta('Categoria'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _categoriaId,
@@ -205,7 +319,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Etiqueta('Unidad de medida'),
+                        const _Etiqueta('Unidad de medida'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           initialValue: _unidad,
@@ -227,6 +341,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                       etiqueta: 'Stock',
                       icono: Icons.warehouse_outlined,
                       controlador: _stock,
+                      formateadores: Formatos.digitos(6),
                       tipoTeclado: TextInputType.number,
                       validador: Validators.stock,
                     ),
@@ -241,6 +356,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                       etiqueta: 'Precio de venta (S/)',
                       icono: Icons.sell_outlined,
                       controlador: _precioVenta,
+                      formateadores: [Formatos.decimal(enteros: 6)],
                       tipoTeclado:
                           const TextInputType.numberWithOptions(decimal: true),
                       validador: Validators.precio,
@@ -253,6 +369,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                       etiqueta: 'Precio de compra (opc.)',
                       icono: Icons.shopping_bag_outlined,
                       controlador: _precioCompra,
+                      formateadores: [Formatos.decimal(enteros: 6)],
                       tipoTeclado:
                           const TextInputType.numberWithOptions(decimal: true),
                       validador: Validators.precioOpcional,
@@ -260,13 +377,40 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 22),
+              const _Etiqueta('Alerta de stock y origen del precio'),
+              const SizedBox(height: 8),
+              CustomTextField(
+                etiqueta: 'Stock minimo (alerta)',
+                icono: Icons.notification_important_outlined,
+                controlador: _stockMin,
+                formateadores: Formatos.digitos(4),
+                tipoTeclado: TextInputType.number,
+                ayuda: 'Al llegar a esta cantidad se envia la alerta de reposicion',
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                etiqueta: 'Fuente del precio',
+                icono: Icons.storefront_outlined,
+                controlador: _fuente,
+                formateadores: Formatos.texto(60),
+                ayuda: 'Tienda donde lo verificaste: Promart, Sodimac, Maestro, local...',
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                etiqueta: 'Enlace de la fuente (opcional)',
+                icono: Icons.link,
+                controlador: _urlFuente,
+                formateadores: Formatos.texto(200),
+                tipoTeclado: TextInputType.url,
+              ),
               const SizedBox(height: 32),
-              AnimatedButton(
-                texto: _esEdicion ? 'Guardar cambios' : 'Registrar producto',
-                icono: Icons.save_outlined,
+              AccionesFormulario(
+                esEdicion: _esEdicion,
+                hayCambios: _cambios().isNotEmpty,
                 cargando: _cargando,
-                onPressed: _guardar,
-                ancho: double.infinity,
+                textoRegistrar: 'Registrar producto',
+                onGuardar: _guardar,
               ),
               const SizedBox(height: 24),
             ],

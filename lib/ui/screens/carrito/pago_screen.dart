@@ -1,25 +1,30 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dinero.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../data/models/venta.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/cotizacion_provider.dart';
+import '../../../services/cotizacion_pdf.dart';
 import '../../../providers/carrito_provider.dart';
 import '../../../providers/producto_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/buttons/animated_button.dart';
-import '../../widgets/carrito/carrito_flotante.dart';
 import '../../widgets/comprobante/codigos_painter.dart';
-import '../../widgets/comprobante/comprobante_view.dart';
+import '../../widgets/comprobante/comprobante_acciones.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/tilt_3d.dart';
+import '../../../core/utils/formatos.dart';
 import '../main/main_shell_screen.dart';
 
 /// Flujo de pago en tres fases: elegir metodo (con su panel propio), procesar
@@ -47,6 +52,7 @@ class _PagoScreenState extends State<PagoScreen> {
   int _fase = 0; // 0 elegir, 1 procesando, 2 listo
   String _mensaje = '';
   Venta? _venta;
+  String? _cotizacionPagada; // numero de la cotizacion saldada (si hubo)
 
   static const _metodos = <_Metodo>[
     _Metodo('Efectivo', Icons.payments_outlined, 'EN CAJA', Color(0xFF43A047)),
@@ -61,16 +67,47 @@ class _PagoScreenState extends State<PagoScreen> {
     final c = context.read<CarritoProvider>();
     _articulos = c.items.length;
     _unidades = c.items.fold<int>(0, (a, i) => a + i.cantidad);
-    _subtotal = c.subtotal;
-    _igv = _subtotal * AppConstants.igv;
-    _total = _subtotal + _igv;
-    CarritoFlotante.bloquear();
+    _subtotal = Dinero.r2(c.subtotal);
+    _igv = VentaProvider.calcularIgv(_subtotal);
+    _total = Dinero.r2(_subtotal + _igv);
   }
 
   @override
   void dispose() {
-    CarritoFlotante.desbloquear();
     super.dispose();
+  }
+
+  /// Cancela el pago de cotizacion y regresa al carrito.
+  /// Si hay productos agregados fuera de la cotizacion, se descarta el pago.
+  Future<void> _abandonarPago() async {
+    final carrito = context.read<CarritoProvider>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ABANDONAR PAGO DE COTIZACION'),
+        content: const Text(
+          'Si abandonas, los productos agregados a este pago se daran de baja. '
+          'La cotizacion quedara sin pagar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('NO, SEGUIR PAGANDO'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('SI, ABANDONAR'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || ok != true) return;
+    carrito.limpiar();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _pagar() async {
@@ -90,12 +127,25 @@ class _PagoScreenState extends State<PagoScreen> {
           items: carrito.aItemsVenta(),
           metodoPago: _metodo!,
           comprobante: widget.comprobante,
+          vendedorId: context.read<AuthProvider>().usuarioActual?.id ?? '',
+          vendedor: context.read<AuthProvider>().usuarioActual?.nombre ?? '',
+          redondeo: _metodo == 'Efectivo' ? Dinero.redondeoEfectivo(_total) : 0,
         );
     context.read<ProductoProvider>().descontarStock(
           carrito.items
               .map((i) => (productoId: i.producto.id, cantidad: i.cantidad))
               .toList(),
         );
+    // Si el carrito venia de una cotizacion, queda saldada (PAGADA).
+    final cotId = carrito.cotizacionId;
+    if (cotId != null) {
+      final cotizaciones = context.read<CotizacionProvider>();
+      final c = cotizaciones.buscarPorId(cotId);
+      if (c != null) {
+        cotizaciones.cambiarEstado(cotId, 'Pagada');
+        _cotizacionPagada = CotizacionPdf.numero(c);
+      }
+    }
     carrito.limpiar();
 
     setState(() {
@@ -118,7 +168,7 @@ class _PagoScreenState extends State<PagoScreen> {
       child: PopScope(
         canPop: _fase != 1,
         child: Scaffold(
-          appBar: AppBar(
+          appBar: AppBarTaller(mostrarCarrito: false, 
             automaticallyImplyLeading: _fase != 1,
             title: Text(_fase == 2 ? 'Pago completado' : 'Pagar'),
           ),
@@ -138,6 +188,7 @@ class _PagoScreenState extends State<PagoScreen> {
               _ => _Exito(
                   key: const ValueKey('e'),
                   venta: _venta!,
+                  cotizacion: _cotizacionPagada,
                   cliente: widget.cliente,
                   vendedor: usuario?.nombre.split(' ').first ?? 'Caja 01',
                   onNuevaVenta: () => _irA(1),
@@ -221,6 +272,43 @@ class _PagoScreenState extends State<PagoScreen> {
         ),
 
         const SizedBox(height: 26),
+
+        // ---------------------------------- acciones adicionales (solo en pago de cotizacion)
+        if (context.read<CarritoProvider>().enModoCotizacion) ...[
+          const _Mono('ACCIONES DE COTIZACION', AppTheme.hueso, grande: true),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('AGREGAR PRODUCTOS A MI COTIZACION'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: BorderSide(color: AppTheme.primary, width: 1.4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _abandonarPago,
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('ABANDONAR PAGO'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.danger,
+                    side: BorderSide(color: AppTheme.danger, width: 1.4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+        ],
+
         const _Mono('¿CON QUE QUIERES PAGAR?', AppTheme.hueso, grande: true),
         const SizedBox(height: 12),
 
@@ -303,7 +391,7 @@ class _PagoScreenState extends State<PagoScreen> {
       case 'Efectivo':
         return _PanelEfectivo(
           key: const ValueKey('efectivo'),
-          total: _total,
+          totalExacto: _total,
           onPagar: _pagar,
         );
       default:
@@ -355,7 +443,7 @@ class _TileMetodo extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: ShapeDecoration(
             color: activo
-                ? metodo.color.withOpacity(0.16)
+                ? metodo.color.withValues(alpha: 0.16)
                 : AppTheme.superficieOscura,
             shape: BeveledRectangleBorder(
               borderRadius:
@@ -544,7 +632,7 @@ class _PanelQrState extends State<_PanelQr>
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
-                                  color: widget.color.withOpacity(0.8),
+                                  color: widget.color.withValues(alpha: 0.8),
                                   blurRadius: 12,
                                   spreadRadius: 1),
                             ],
@@ -560,9 +648,9 @@ class _PanelQrState extends State<_PanelQr>
           const SizedBox(height: 16),
           const _Mono('ESCANEA EL QR DESDE TU APP', Color(0x99EDE8DF)),
           const SizedBox(height: 6),
-          Text(
+          const Text(
             'o envia al ${AppConstants.celularYapePlin}',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.hueso),
@@ -573,7 +661,7 @@ class _PanelQrState extends State<_PanelQr>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.14),
+              color: widget.color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -847,7 +935,7 @@ class _TarjetaVisual extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFFFB300).withOpacity(0.9),
+                    color: const Color(0xFFFFB300).withValues(alpha: 0.9),
                     shape: BoxShape.circle),
               ),
             ),
@@ -1012,10 +1100,15 @@ class _TarjetaVisual extends StatelessWidget {
 // ----------------------------------------------------------- efectivo
 
 class _PanelEfectivo extends StatefulWidget {
-  final double total;
+  /// Total exacto de la venta (con centimos).
+  final double totalExacto;
   final VoidCallback onPagar;
 
-  const _PanelEfectivo({super.key, required this.total, required this.onPagar});
+  const _PanelEfectivo({
+    super.key,
+    required this.totalExacto,
+    required this.onPagar,
+  });
 
   @override
   State<_PanelEfectivo> createState() => _PanelEfectivoState();
@@ -1024,9 +1117,17 @@ class _PanelEfectivo extends StatefulWidget {
 class _PanelEfectivoState extends State<_PanelEfectivo> {
   final _recibido = TextEditingController();
 
-  double get _monto => double.tryParse(_recibido.text.replaceAll(',', '.')) ?? 0;
-  double get _vuelto => _monto - widget.total;
-  bool get _alcanza => _monto + 0.0001 >= widget.total;
+  /// Lo que realmente se cobra en efectivo (redondeado a favor del cliente).
+  double get _cobro => Dinero.totalEnEfectivo(widget.totalExacto);
+  double get _redondeo => Dinero.redondeoEfectivo(widget.totalExacto);
+
+  double get _monto =>
+      double.tryParse(_recibido.text.replaceAll(',', '.')) ?? 0;
+
+  // Se compara en centimos para evitar errores de decimales
+  bool get _alcanza => Dinero.centimos(_monto) >= Dinero.centimos(_cobro);
+  double get _vuelto => Dinero.r2(_monto - _cobro);
+  double get _faltan => Dinero.r2(_cobro - _monto);
 
   @override
   void initState() {
@@ -1041,7 +1142,8 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
   }
 
   void _poner(double v) {
-    _recibido.text = v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
+    _recibido.text =
+        v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
     _recibido.selection =
         TextSelection.collapsed(offset: _recibido.text.length);
   }
@@ -1050,19 +1152,93 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
   Widget build(BuildContext context) {
     final rapidos = <double>[
       for (final v in [50.0, 100.0, 200.0])
-        if (v >= widget.total) v,
+        if (Dinero.centimos(v) >= Dinero.centimos(_cobro)) v,
     ];
+    final vacio = _monto == 0;
 
     return _Caja(
       color: const Color(0xFF43A047),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ------------------------------------------- aviso de redondeo
+          if (_redondeo > 0) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: BoxDecoration(
+                color: AppTheme.amarilloSenal.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: AppTheme.amarilloSenal.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _Mono('REDONDEO EN EFECTIVO', AppTheme.amarilloSenal),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total exacto',
+                        style: TextStyle(
+                            color: AppTheme.hueso.withValues(alpha: 0.7),
+                            fontSize: 13),
+                      ),
+                      Text(
+                        Formatters.soles(widget.totalExacto),
+                        style: TextStyle(
+                          color: AppTheme.hueso.withValues(alpha: 0.7),
+                          fontSize: 13,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Descuento por redondeo',
+                        style:
+                            TextStyle(color: AppTheme.hueso, fontSize: 13),
+                      ),
+                      Text(
+                        '- ${Formatters.soles(_redondeo)}',
+                        style: const TextStyle(
+                          color: AppTheme.amarilloSenal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'En efectivo el total se redondea a favor del cliente '
+                    'a multiplos de S/ 0.10 (Codigo de Proteccion y Defensa '
+                    'del Consumidor, art. 44). Con Yape, Plin o tarjeta se '
+                    'cobra el monto exacto.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      height: 1.4,
+                      color: AppTheme.hueso.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           const _Mono('MONTO RECIBIDO', AppTheme.hueso, grande: true),
           const SizedBox(height: 10),
           TextField(
             controller: _recibido,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [Formatos.decimal(enteros: 5)],
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
             decoration: const InputDecoration(
               prefixText: 'S/  ',
@@ -1074,7 +1250,8 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ChipRapido('EXACTO', () => _poner(widget.total)),
+              _ChipRapido('EXACTO ${Formatters.soles(_cobro)}',
+                  () => _poner(_cobro)),
               for (final v in rapidos)
                 _ChipRapido('S/ ${v.toStringAsFixed(0)}', () => _poner(v)),
             ],
@@ -1085,24 +1262,29 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: (_alcanza ? const Color(0xFF43A047) : AppTheme.danger)
-                  .withOpacity(0.14),
+              color: (vacio
+                      ? Colors.white
+                      : (_alcanza ? const Color(0xFF43A047) : AppTheme.danger))
+                  .withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
               children: [
-                _Mono(_alcanza ? 'VUELTO' : 'FALTAN',
-                    const Color(0x99EDE8DF)),
+                _Mono(
+                  vacio
+                      ? 'TOTAL A COBRAR'
+                      : (_alcanza ? 'VUELTO' : 'FALTAN'),
+                  const Color(0x99EDE8DF),
+                ),
                 const SizedBox(height: 2),
                 Text(
-                  Formatters.soles(_monto == 0
-                      ? widget.total
-                      : _vuelto.abs()),
+                  Formatters.soles(
+                      vacio ? _cobro : (_alcanza ? _vuelto : _faltan)),
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
-                    color: _monto == 0
-                        ? const Color(0x66EDE8DF)
+                    color: vacio
+                        ? AppTheme.hueso
                         : (_alcanza
                             ? const Color(0xFF66BB6A)
                             : const Color(0xFFFF6E6E)),
@@ -1113,7 +1295,7 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
           ),
           const SizedBox(height: 16),
           AnimatedButton(
-            texto: 'Cobrar ${Formatters.soles(widget.total)}',
+            texto: 'Cobrar ${Formatters.soles(_cobro)}',
             icono: Icons.payments_outlined,
             ancho: double.infinity,
             onPressed: _alcanza ? widget.onPagar : null,
@@ -1226,11 +1408,13 @@ class _Exito extends StatefulWidget {
   final Venta venta;
   final Cliente? cliente;
   final String vendedor;
+  final String? cotizacion; // numero de cotizacion pagada (null en compras normales)
   final VoidCallback onNuevaVenta;
   final VoidCallback onHistorial;
 
   const _Exito({
     super.key,
+    this.cotizacion,
     required this.venta,
     required this.cliente,
     required this.vendedor,
@@ -1318,10 +1502,12 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
             const SizedBox(height: 20),
             FadeSlide(
               delay: const Duration(milliseconds: 300),
-              child: const Text(
-                'MUCHAS GRACIAS\nPOR SU COMPRA',
+              child: Text(
+                widget.cotizacion != null
+                    ? 'COTIZACIÓN\nPAGADA'
+                    : 'MUCHAS GRACIAS\nPOR SU COMPRA',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 28,
                   height: 1.05,
                   fontWeight: FontWeight.w900,
@@ -1333,10 +1519,13 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
             const SizedBox(height: 10),
             FadeSlide(
               delay: const Duration(milliseconds: 450),
-              child: const Text(
-                'Aqui esta su comprobante.\nQue tenga un buen dia.',
+              child: Text(
+                widget.cotizacion != null
+                    ? 'La cotización ${widget.cotizacion} fue saldada en su '
+                        'totalidad.\nAquí está su comprobante de pago.'
+                    : 'Aqui esta su comprobante.\nQue tenga un buen dia.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 15, height: 1.45, color: Color(0xCCEDE8DF)),
               ),
             ),
@@ -1345,7 +1534,7 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
               delay: const Duration(milliseconds: 650),
               inicio: const Offset(0, 0.3),
               duracion: const Duration(milliseconds: 900),
-              child: ComprobanteView(
+              child: ComprobanteConAcciones(
                 venta: widget.venta,
                 cliente: widget.cliente,
                 vendedor: widget.vendedor,
@@ -1427,7 +1616,7 @@ class _ConfetiPainter extends CustomPainter {
       canvas.rotate(u * 9 + p.giro);
       canvas.drawRect(
         Rect.fromCenter(center: Offset.zero, width: p.ancho, height: p.ancho * 0.45),
-        Paint()..color = p.color.withOpacity(1 - u * 0.6),
+        Paint()..color = p.color.withValues(alpha: 1 - u * 0.6),
       );
       canvas.restore();
     }
@@ -1456,7 +1645,7 @@ class _Caja extends StatelessWidget {
         shape: BeveledRectangleBorder(
           borderRadius:
               const BorderRadius.only(bottomRight: Radius.circular(24)),
-          side: BorderSide(color: color.withOpacity(0.7), width: 1.6),
+          side: BorderSide(color: color.withValues(alpha: 0.7), width: 1.6),
         ),
       ),
       child: child,

@@ -25,14 +25,21 @@ class SectionHeader extends StatelessWidget {
         children: [
           Container(width: 6, height: 20, color: AppTheme.primary),
           const SizedBox(width: 10),
-          Text(
-            titulo.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.6,
+          
+          // 🔥 SOLUCIÓN: Envolvemos el Text en Flexible y agregamos ellipsis
+          Flexible(
+            child: Text(
+              titulo.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.6,
+              ),
             ),
           ),
+          
           const SizedBox(width: 12),
           Expanded(
             child: Container(

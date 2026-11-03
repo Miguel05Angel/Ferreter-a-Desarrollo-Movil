@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/formatos.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/utils/validators.dart';
 import '../../../data/models/cliente.dart';
 import '../../../providers/cliente_provider.dart';
-import '../../widgets/buttons/animated_button.dart';
+import '../../widgets/feedback/edicion_flow.dart';
 import '../../widgets/inputs/custom_text_field.dart';
 
 class ClienteFormScreen extends StatefulWidget {
@@ -39,7 +43,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
     _email = TextEditingController(text: c?.email ?? '');
     _tipoDocumento = c?.tipoDocumento ?? 'DNI';
     _credito = c?.credito ?? false;
+    for (final x in [_nombre, _documento, _telefono, _direccion, _email]) {
+      x.addListener(_alCambiar);
+    }
   }
+
+  void _alCambiar() => setState(() {});
 
   @override
   void dispose() {
@@ -58,6 +67,20 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
     return _tipoDocumento == 'DNI' ? Validators.dni(valor) : Validators.ruc(valor);
   }
 
+  List<CambioCampo> _cambios() {
+    final c = widget.cliente;
+    if (c == null) return [];
+    final k = ComparadorCambios();
+    k.texto('Nombre', c.nombre, _nombre.text);
+    k.texto('Tipo de documento', c.tipoDocumento, _tipoDocumento);
+    k.texto('Documento', c.documento, _documento.text);
+    k.texto('Telefono', c.telefono, _telefono.text);
+    k.texto('Direccion', c.direccion, _direccion.text);
+    k.texto('Correo', c.email, _email.text);
+    k.texto('Venta al credito', c.credito ? 'Si' : 'No', _credito ? 'Si' : 'No');
+    return k.cambios;
+  }
+
   Future<void> _guardar() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -71,6 +94,15 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
         ),
       );
       return;
+    }
+
+    if (_esEdicion) {
+      final seguro = await EdicionFlow.confirmar(
+        context,
+        entidad: 'a este cliente',
+        cambios: _cambios(),
+      );
+      if (!seguro || !mounted) return;
     }
 
     setState(() => _cargando = true);
@@ -97,21 +129,21 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
     setState(() => _cargando = false);
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_esEdicion
-            ? 'Cliente actualizado correctamente'
-            : 'Cliente registrado correctamente'),
-        backgroundColor: const Color(0xFF2E7D32),
-      ),
+    await EdicionFlow.exito(
+      context,
+      titulo: _esEdicion ? 'Cliente actualizado' : 'Cliente registrado',
+      mensaje: _esEdicion
+          ? 'Los cambios se guardaron correctamente.'
+          : 'Se agrego a tu lista correctamente.',
     );
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBarTaller(mostrarCarrito: false, 
           title: Text(_esEdicion ? 'Editar cliente' : 'Nuevo cliente')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -123,6 +155,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                 etiqueta: 'Nombre completo o razon social',
                 icono: Icons.person_outline,
                 controlador: _nombre,
+                formateadores: Formatos.nombre(60),
                 validador: Validators.nombre,
                 capitalizacion: TextCapitalization.words,
               ),
@@ -167,6 +200,8 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                       etiqueta: 'N. de documento',
                       icono: Icons.pin_outlined,
                       controlador: _documento,
+                      formateadores:
+                          Formatos.digitos(_tipoDocumento == 'RUC' ? 11 : 8),
                       tipoTeclado: TextInputType.number,
                       validador: _validarDocumento,
                       ayuda: _tipoDocumento == 'DNI'
@@ -181,6 +216,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                 etiqueta: 'Telefono',
                 icono: Icons.phone_outlined,
                 controlador: _telefono,
+                formateadores: Formatos.digitos(9),
                 tipoTeclado: TextInputType.phone,
                 validador: Validators.telefono,
                 ayuda: '9 digitos, ej: 987654321',
@@ -190,6 +226,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                 etiqueta: 'Direccion',
                 icono: Icons.location_on_outlined,
                 controlador: _direccion,
+                formateadores: Formatos.texto(100),
                 validador: Validators.direccion,
                 capitalizacion: TextCapitalization.sentences,
               ),
@@ -198,6 +235,7 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                 etiqueta: 'Correo (opcional)',
                 icono: Icons.email_outlined,
                 controlador: _email,
+                formateadores: Formatos.correo(60),
                 tipoTeclado: TextInputType.emailAddress,
                 validador: (v) => v == null || v.trim().isEmpty
                     ? null
@@ -213,12 +251,12 @@ class _ClienteFormScreenState extends State<ClienteFormScreen> {
                 secondary: const Icon(Icons.credit_score_outlined),
               ),
               const SizedBox(height: 28),
-              AnimatedButton(
-                texto: _esEdicion ? 'Guardar cambios' : 'Registrar cliente',
-                icono: Icons.save_outlined,
+              AccionesFormulario(
+                esEdicion: _esEdicion,
+                hayCambios: _cambios().isNotEmpty,
                 cargando: _cargando,
-                onPressed: _guardar,
-                ancho: double.infinity,
+                textoRegistrar: 'Registrar cliente',
+                onGuardar: _guardar,
               ),
               const SizedBox(height: 24),
             ],

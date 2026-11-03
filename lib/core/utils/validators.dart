@@ -55,6 +55,9 @@ class Validators {
     if (!RegExp(r'^\d{8}$').hasMatch(valor!.trim())) {
       return 'El DNI debe tener 8 digitos numericos';
     }
+    if (valor.trim() == '00000000') {
+      return 'Ingresa un DNI valido';
+    }
     return null;
   }
 
@@ -64,14 +67,17 @@ class Validators {
     if (!RegExp(r'^\d{11}$').hasMatch(valor!.trim())) {
       return 'El RUC debe tener 11 digitos numericos';
     }
+    if (!RegExp(r'^(10|15|16|17|20)').hasMatch(valor.trim())) {
+      return 'El RUC debe empezar con 10 o 20';
+    }
     return null;
   }
 
   static String? telefono(String? valor) {
     final base = requerido(valor, 'Ingresa el numero de telefono');
     if (base != null) return base;
-    if (!RegExp(r'^\d{9}$').hasMatch(valor!.trim())) {
-      return 'El telefono debe tener 9 digitos (ej: 987654321)';
+    if (!RegExp(r'^9\d{8}$').hasMatch(valor!.trim())) {
+      return 'El celular debe tener 9 digitos y empezar con 9 (ej: 987654321)';
     }
     return null;
   }

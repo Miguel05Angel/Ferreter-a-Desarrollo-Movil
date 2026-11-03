@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/permisos.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
@@ -58,44 +61,13 @@ class _PerfilPageState extends State<PerfilPage> {
     }
   }
 
-  /// Abre Google Maps con la ubicacion exacta de la ferreteria.
-  Future<void> _abrirMapa() async {
-    final url = Uri.parse(
-      'https://www.google.com/maps/search/?api=1'
-      '&query=${AppConstants.latitudFerreteria},${AppConstants.longitudFerreteria}'
-      '&query_place_id=Ferreteria+El+Constructor',
-    );
-    try {
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        throw Exception('No se pudo abrir Google Maps');
-      }
-    } catch (_) {
-      if (!mounted) return;
-      // Respaldo: buscar por direccion textual
-      final fallback = Uri.parse(
-        'https://www.google.com/maps/search/?api=1'
-        '&query=${Uri.encodeComponent(AppConstants.direccionFerreteria)}',
-      );
-      if (await canLaunchUrl(fallback)) {
-        await launchUrl(fallback, mode: LaunchMode.externalApplication);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo abrir Google Maps en este dispositivo'),
-            backgroundColor: Color(0xFFD32F2F),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().usuarioActual;
     final tema = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: const AppBarTaller(subtitulo: 'Cuenta', title: Text('Mi perfil')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -185,37 +157,10 @@ class _PerfilPageState extends State<PerfilPage> {
               ),
             ),
           ),
-          const SectionHeader(titulo: 'Ubicacion'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E7D32).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.location_on,
-                        color: Color(0xFF2E7D32)),
-                  ),
-                  title: const Text('Ferreteria El Constructor'),
-                  subtitle:
-                      const Text(AppConstants.direccionFerreteria),
-                  trailing: const Icon(Icons.map_outlined),
-                  onTap: _abrirMapa,
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.navigation_outlined),
-                  title: const Text('Como llegar'),
-                  subtitle: const Text(
-                      'Abre Google Maps con la ubicacion exacta de la tienda'),
-                  trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: _abrirMapa,
-                ),
-              ],
-            ),
+          const SectionHeader(titulo: 'Rol y permisos'),
+          FadeSlide(
+            delay: const Duration(milliseconds: 150),
+            child: _TarjetaPermisos(permisos: Permisos.de(context)),
           ),
           const SectionHeader(titulo: 'Preferencias'),
           Card(
@@ -322,4 +267,105 @@ class _BiselClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(_BiselClipper oldClipper) => false;
+}
+
+
+/// Lista de lo que el rol actual puede y no puede hacer.
+class _TarjetaPermisos extends StatelessWidget {
+  final Permisos permisos;
+
+  const _TarjetaPermisos({required this.permisos});
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = permisos.resumen;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: permisos.esAdmin
+                        ? AppTheme.amarilloSenal
+                        : AppTheme.grafito,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text(
+                    permisos.rol.toUpperCase(),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      letterSpacing: 1.6,
+                      fontWeight: FontWeight.w900,
+                      color: permisos.esAdmin
+                          ? AppTheme.grafito
+                          : AppTheme.hueso,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    permisos.esAdmin ? 'Control total' : 'Acceso de ventas',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (var i = 0; i < lista.length; i++)
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: Duration(milliseconds: 350 + i * 70),
+                curve: Curves.easeOutCubic,
+                builder: (context, v, child) => Opacity(
+                  opacity: v,
+                  child: Transform.translate(
+                      offset: Offset((1 - v) * 16, 0), child: child),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 9),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        lista[i].$2
+                            ? Icons.check_circle
+                            : Icons.cancel_outlined,
+                        size: 19,
+                        color: lista[i].$2
+                            ? AppTheme.success
+                            : Colors.grey.shade500,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          lista[i].$1,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.25,
+                            color: lista[i].$2
+                                ? null
+                                : Colors.grey.shade500,
+                            decoration: lista[i].$2
+                                ? null
+                                : TextDecoration.lineThrough,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }

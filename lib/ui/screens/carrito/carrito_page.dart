@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/media/producto_imagen.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
+import '../../../services/cotizacion_pdf.dart';
+import '../../../providers/cotizacion_provider.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/dinero.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../providers/carrito_provider.dart';
 import '../../../providers/cliente_provider.dart';
 import '../../../providers/producto_provider.dart';
+import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/chips/selector_opciones.dart';
 import '../../widgets/feedback/confirm_dialog.dart';
 import '../../widgets/feedback/empty_state.dart';
 import '../../widgets/inputs/quantity_selector.dart';
+import '../../widgets/inputs/selector_cliente.dart';
 import '../../widgets/layout/section_header.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/producto_illustration.dart';
@@ -73,16 +82,20 @@ class _CarritoPageState extends State<CarritoPage> {
     final carrito = context.watch<CarritoProvider>();
     final clientes = context.watch<ClienteProvider>();
     final categorias = context.read<ProductoProvider>();
-    final igv = carrito.subtotal * AppConstants.igv;
+    final subtotalR = Dinero.r2(carrito.subtotal);
+    final igv = VentaProvider.calcularIgv(subtotalR);
+    final totalR = Dinero.r2(subtotalR + igv);
     final unidades = carrito.items.fold<int>(0, (a, i) => a + i.cantidad);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nueva venta'),
+      appBar: AppBarTaller(
+        mostrarCarrito: false,
+        subtitulo: 'Punto de venta',
+        title: Text(carrito.enModoCotizacion ? 'Pago de cotizacion' : 'Nueva venta'),
         actions: [
           if (!carrito.vacio)
             IconButton(
-              tooltip: 'Vaciar carrito',
+              tooltip: 'Limpiar carrito',
               icon: const Icon(Icons.delete_sweep_outlined),
               onPressed: () {
                 ConfirmDialog.mostrar(
@@ -107,7 +120,31 @@ class _CarritoPageState extends State<CarritoPage> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
               children: [
                 // ------------------------------------------ detalle
+                if (carrito.enModoCotizacion)
+                  FadeSlide(
+                    child: _BannerPagoCotizacion(
+                        cotizacionId: carrito.cotizacionId!),
+                  ),
                 const SectionHeader(titulo: 'Detalle del pedido'),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => ConfirmDialog.mostrar(
+                      context,
+                      titulo: 'Limpiar carrito',
+                      mensaje: 'Se quitaran todos los productos de una sola vez.',
+                      textoConfirmar: 'Limpiar',
+                      onConfirmar: () => carrito.limpiar(),
+                    ),
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 19),
+                    label: const Text('Limpiar carrito'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.danger,
+                      textStyle: const TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
                 ...carrito.items.asMap().entries.map(
                       (e) => FadeSlide(
                         key: ValueKey(e.value.producto.id),
@@ -133,26 +170,9 @@ class _CarritoPageState extends State<CarritoPage> {
 
                 // ------------------------------------------ cliente
                 const SectionHeader(titulo: 'Cliente'),
-                DropdownButtonFormField<String>(
-                  initialValue: _clienteId,
-                  isExpanded: true,
-                  hint: const Text('Publico en general'),
-                  decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.person_outline)),
-                  items: [
-                    const DropdownMenuItem(
-                        value: null, child: Text('Publico en general')),
-                    ...clientes.clientes.map(
-                      (c) => DropdownMenuItem(
-                        value: c.id,
-                        child: Text(
-                          '${c.nombre}  (${c.tipoDocumento})',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _clienteId = v),
+                SelectorCliente(
+                  clienteId: _clienteId,
+                  onCambio: (v) => setState(() => _clienteId = v),
                 ),
 
                 // ------------------------------------- comprobante
@@ -216,7 +236,7 @@ class _CarritoPageState extends State<CarritoPage> {
                               _FilaTotal('Unidades llevadas', '$unidades'),
                               const SizedBox(height: 8),
                               _FilaTotal('Subtotal',
-                                  Formatters.soles(carrito.subtotal)),
+                                  Formatters.soles(subtotalR)),
                               const SizedBox(height: 8),
                               _FilaTotal('IGV (18%)', Formatters.soles(igv)),
                               const SizedBox(height: 14),
@@ -224,7 +244,7 @@ class _CarritoPageState extends State<CarritoPage> {
                               const SizedBox(height: 14),
                               _FilaTotal(
                                 'Total para pagar',
-                                Formatters.soles(carrito.subtotal + igv),
+                                Formatters.soles(totalR),
                                 destacado: true,
                               ),
                             ],
@@ -236,7 +256,7 @@ class _CarritoPageState extends State<CarritoPage> {
                 ),
                 const SizedBox(height: 22),
                 AnimatedButton(
-                  texto: 'Pagar ${Formatters.soles(carrito.subtotal + igv)}',
+                  texto: 'Pagar ${Formatters.soles(totalR)}',
                   icono: Icons.payments_outlined,
                   ancho: double.infinity,
                   onPressed: _irAPagar,
@@ -280,19 +300,15 @@ class _LineaPedido extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        colorCategoria.withOpacity(0.10),
-                        colorCategoria.withOpacity(0.26),
+                        colorCategoria.withValues(alpha: 0.10),
+                        colorCategoria.withValues(alpha: 0.26),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ProductoIlustracion(
-                    tipo: p.tipoVisual,
-                    colorHex: p.colorHex,
-                    size: 46,
-                  ),
+                  child: ProductoImagen(producto: p, size: 46),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -329,6 +345,49 @@ class _LineaPedido extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
+            // ---------------------------------- alerta de stock por linea
+            if (p.stockBajo || item.cantidad >= p.stock) ...[
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: p.agotado
+                      ? AppTheme.danger.withValues(alpha: 0.14)
+                      : const Color(0xFFE65100).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: p.agotado
+                        ? AppTheme.danger.withValues(alpha: 0.7)
+                        : const Color(0xFFE65100).withValues(alpha: 0.7),
+                    width: 1.2,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      p.agotado ? Icons.error_outline : Icons.warning_rounded,
+                      color: p.agotado ? AppTheme.danger : const Color(0xFFE65100),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        p.agotado
+                            ? 'AGOTADO: no queda stock de ${p.nombre}'
+                            : 'STOCK BAJO: quedan ${p.stock} ${p.unidad.toLowerCase()}. '
+                                'Revisa la cantidad antes de pagar.',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: p.agotado ? AppTheme.danger : const Color(0xFFE65100),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             // Desglose: unitario x cantidad = importe
             Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -484,6 +543,53 @@ class _LineaCorte extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Aviso fijo cuando el carrito sirve para pagar una cotizacion aprobada.
+class _BannerPagoCotizacion extends StatelessWidget {
+  final String cotizacionId;
+  const _BannerPagoCotizacion({required this.cotizacionId});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.watch<CotizacionProvider>().buscarPorId(cotizacionId);
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.7), width: 1.4),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.request_quote_outlined, color: AppTheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('PAGO DE COTIZACION',
+                    style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 10.5,
+                        letterSpacing: 1.4,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.primary)),
+                const SizedBox(height: 2),
+                Text(
+                  c == null
+                      ? 'Cotizacion en proceso de pago'
+                      : '${CotizacionPdf.numero(c)}  |  ${c.clienteNombre}',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

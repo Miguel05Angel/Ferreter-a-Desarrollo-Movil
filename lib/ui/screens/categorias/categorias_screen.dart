@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../providers/producto_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
-import '../productos/producto_detalle_screen.dart';
+import '../../widgets/layout/appbar_taller.dart';
+import '../productos/productos_page.dart';
 
+/// Categorias: al tocar una se abre el catalogo con sus marcas disponibles.
 class CategoriasScreen extends StatelessWidget {
   const CategoriasScreen({super.key});
 
@@ -14,7 +16,8 @@ class CategoriasScreen extends StatelessWidget {
     final provider = context.watch<ProductoProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Categorias')),
+      appBar: const AppBarTaller(
+          subtitulo: 'Clasificacion', title: Text('Categorias')),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: provider.categorias.length,
@@ -22,6 +25,7 @@ class CategoriasScreen extends StatelessWidget {
           final cat = provider.categorias[i];
           final productos =
               provider.productos.where((p) => p.categoriaId == cat.id).toList();
+          final marcas = productos.map((p) => p.marca).toSet().length;
 
           return FadeSlide(
             delay: Duration(milliseconds: i * 60),
@@ -30,48 +34,32 @@ class CategoriasScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: cat.color.withOpacity(0.3)),
+                border: Border.all(color: cat.color.withValues(alpha: 0.3)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
-                child: ExpansionTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: cat.color.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(cat.icono, color: cat.color),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: cat.color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  title: Text(cat.nombre,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${productos.length} productos'),
-                  children: productos
-                      .map(
-                        (p) => ListTile(
-                          dense: true,
-                          title: Text(p.nombre),
-                          subtitle: Text(
-                              '${p.marca}  |  Stock: ${p.stock}'),
-                          trailing: Text('S/ ${p.precioVenta}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold)),
-                          onTap: () => AppRoutes.push(
-                            context,
-                            ProductoDetalleScreen(productoId: p.id),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  child: Icon(cat.icono, color: cat.color),
                 ),
+                title: Text(cat.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: Text('${productos.length} productos  ·  $marcas marcas'),
+                trailing: Icon(Icons.chevron_right, color: cat.color),
+                onTap: () => AppRoutes.push(
+                    context, ProductosPage(categoriaInicial: cat.id)),
               ),
             ),
           );

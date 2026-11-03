@@ -1,44 +1,28 @@
-# Conectar ferreteria_app a Firestore (base `ferreteria-db`)
+# ferreteria_app - correcciones (stock reservado, efectivo, reposicion, bienvenida)
 
-## 1. Copiar los archivos
-Descomprime este zip SOBRE tu proyecto (mismas carpetas, reemplaza cuando pregunte).
-Archivos nuevos/cambiados:
+## 1. Copiar
+Descomprime este zip SOBRE tu proyecto (mismas carpetas) y acepta reemplazar.
 
-- lib/main.dart
-- lib/services/firestore_service.dart
-- lib/data/firestore_mappers.dart  (nuevo)
-- lib/providers/{producto,cliente,proveedor,venta,cotizacion}_provider.dart
-- android/app/src/main/AndroidManifest.xml  (permiso INTERNET)
-
-No cambia ninguna pantalla ni el pubspec.yaml.
-
-## 2. Reglas de la base (en Firebase Console)
-Firestore Database -> selecciona la base **ferreteria-db** (selector de arriba)
--> pestana **Reglas** -> pega el contenido de `firestore.rules` -> **Publicar**.
-
-## 3. Ejecutar
+## 2. Ejecutar
     flutter clean
     flutter pub get
     flutter run
 
-## 4. Comprobar que funciona (consola de `flutter run`)
-Debes ver, en este orden:
+## 3. Como comprobar cada correccion
+1. STOCK EN PLOMO: abre un producto con 2 unidades -> "Agregar" dos veces.
+   El numero baja 2 -> 1 -> 0 con animacion, aparece "2 EN CARRITO" en gris plomo
+   y la barra se pinta de plomo. Si borras el item del carrito, vuelve a subir.
+2. EFECTIVO: vende algo que sume S/ 106.08 -> Efectivo.
+   Aparece el aviso "Redondeo en efectivo": comprobante S/ 106.08, a cobrar S/ 106.00.
+   Con Yape, Plin o Tarjeta se cobra S/ 106.08 exacto.
+3. REPOSICION: abre un producto con 5 unidades o menos (o agotado).
+   Administrador: "Solicitar reposicion de stock" -> elige proveedor, cantidad,
+   "Generar reporte de pedido" (PDF), "Solicitar por WhatsApp", "Llamar",
+   y "Registrar ingreso de stock" cuando llegue la mercaderia.
+   Vendedor: "Avisar al administrador" (WhatsApp).
+4. BIENVENIDA: cierra la app por completo y vuelve a abrirla: el anillo 3D
+   ya muestra los productos y dice "08 REFERENCIAS".
 
-    ✅ Firebase INICIALIZADO. Proyecto: ferreteria-app-16bde
-    ✅ Firestore CONECTADO a la base "ferreteria-db" (el servidor respondió)
-    🌱 Firestore: datos iniciales cargados (N documentos).
-    📡 Firestore [productos]: N documentos (servidor)
-
-## 5. Prueba visual
-1. En Firebase Console -> ferreteria-db -> Datos: aparecen las colecciones
-   productos, clientes, proveedores, ventas, cotizaciones.
-2. En la app crea un producto -> aparece en la consola en segundos.
-3. En la consola cambia el stock de un producto -> cambia solo en la app.
-
-## Si algo falla
-| Mensaje en consola | Que hacer |
-|---|---|
-| permission-denied | Paso 2 (reglas) |
-| not-found | El nombre de la base no es exactamente `ferreteria-db` |
-| unavailable / sin respuesta | Internet del telefono o emulador |
-| No sale ningun mensaje de Firestore | No estas usando estos archivos: revisa el paso 1 |
+## 4. Firebase
+Los datos nuevos (2 proveedores nuevos) se cargan solos al abrir la app
+(version de datos 3). No se pisan tus cambios.

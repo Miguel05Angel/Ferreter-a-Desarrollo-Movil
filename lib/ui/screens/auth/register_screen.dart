@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+
+import '../../../core/utils/formatos.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/routes/app_routes.dart';
@@ -53,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (ok) {
       Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.welcome, (route) => false);
+          AppRoutes.main, (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -67,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Crear cuenta')),
+      appBar: const AppBarTaller(mostrarCarrito: false, subtitulo: 'Registro', title: Text('Crear cuenta')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -79,6 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   etiqueta: 'Nombre completo',
                   icono: Icons.person_outline,
                   controlador: _nombreController,
+                  formateadores: Formatos.nombre(50),
                   validador: Validators.nombre,
                   capitalizacion: TextCapitalization.words,
                   ayuda: 'Ej: Carlos Huaman',
@@ -91,6 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   etiqueta: 'Correo electronico',
                   icono: Icons.email_outlined,
                   controlador: _emailController,
+                  formateadores: Formatos.correo(60),
                   tipoTeclado: TextInputType.emailAddress,
                   validador: Validators.email,
                   ayuda: 'ejemplo@correo.com',
@@ -103,6 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   etiqueta: 'Telefono',
                   icono: Icons.phone_outlined,
                   controlador: _telefonoController,
+                  formateadores: Formatos.digitos(9),
                   tipoTeclado: TextInputType.phone,
                   validador: Validators.telefono,
                   ayuda: '9 digitos, ej: 987654321',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Campo de texto con estilo consistente y validacion integrada.
 class CustomTextField extends StatelessWidget {
@@ -12,6 +13,9 @@ class CustomTextField extends StatelessWidget {
   final String? ayuda;
   final TextCapitalization capitalizacion;
 
+  /// Limita lo que se puede escribir (solo digitos, maximo de caracteres...).
+  final List<TextInputFormatter>? formateadores;
+
   const CustomTextField({
     super.key,
     required this.etiqueta,
@@ -23,6 +27,7 @@ class CustomTextField extends StatelessWidget {
     this.lineas = 1,
     this.ayuda,
     this.capitalizacion = TextCapitalization.none,
+    this.formateadores,
   });
 
   @override
@@ -50,6 +55,7 @@ class CustomTextField extends StatelessWidget {
           obscureText: esPassword,
           maxLines: esPassword ? 1 : lineas,
           textCapitalization: capitalizacion,
+          inputFormatters: formateadores,
           style: const TextStyle(fontSize: 15),
           decoration: InputDecoration(
             hintText: ayuda,
@@ -105,6 +111,7 @@ class _PasswordFieldState extends State<PasswordField> {
           controller: widget.controlador,
           validator: widget.validador,
           obscureText: _oculto,
+          inputFormatters: [LengthLimitingTextInputFormatter(20)],
           decoration: InputDecoration(
             hintText: widget.ayuda,
             prefixIcon: const Icon(Icons.lock_outline, size: 22),

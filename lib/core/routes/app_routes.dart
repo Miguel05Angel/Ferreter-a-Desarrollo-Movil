@@ -8,8 +8,7 @@ import '../../ui/screens/welcome/welcome_screen.dart';
 
 /// Rutas con transicion animada (desvanecido + deslizamiento suave).
 class FadeRoute<T> extends MaterialPageRoute<T> {
-  FadeRoute({required WidgetBuilder builder, RouteSettings? settings})
-      : super(builder: builder, settings: settings);
+  FadeRoute({required super.builder, super.settings});
 
   @override
   Widget buildTransitions(BuildContext context, Animation<double> animation,

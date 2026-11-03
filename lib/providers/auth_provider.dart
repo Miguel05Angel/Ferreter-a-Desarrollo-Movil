@@ -4,11 +4,16 @@ import '../data/mock_data.dart';
 import '../data/models/usuario.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final List<Usuario> _usuarios = [MockData.usuarioDemo];
+  final List<Usuario> _usuarios = [MockData.usuarioDemo, MockData.vendedorDemo];
   Usuario? _usuarioActual;
 
   Usuario? get usuarioActual => _usuarioActual;
   bool get autenticado => _usuarioActual != null;
+
+  /// Verifica la contrasena del usuario que tiene la sesion iniciada
+  /// (se usa para confirmar acciones sensibles, como aprobar una cotizacion).
+  bool verificarPassword(String clave) =>
+      _usuarioActual != null && _usuarioActual!.password == clave;
 
   /// Retorna true si el inicio de sesion fue exitoso.
   bool iniciarSesion(String email, String password) {

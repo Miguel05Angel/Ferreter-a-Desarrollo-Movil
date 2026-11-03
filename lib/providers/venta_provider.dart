@@ -1,44 +1,35 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+import '../core/utils/dinero.dart';
+
 import '../core/constants/app_constants.dart';
-import '../data/firestore_mappers.dart';
+import '../data/mock_data.dart';
 import '../data/models/venta.dart';
-import '../services/firestore_service.dart';
 
 class VentaProvider extends ChangeNotifier {
-  final FirestoreService _fs = FirestoreService.instance;
-
-  List<Venta> _ventas = [];
-  StreamSubscription<List<Venta>>? _sub;
-  bool cargando = true;
-  String? error;
-
-  VentaProvider() {
-    _sub = _fs
-        .escuchar<Venta>(FirestoreService.colVentas, Mapeadores.ventaDesde)
-        .listen((lista) {
-      _ventas = List.of(lista);
-      cargando = false;
-      error = null;
-      notifyListeners();
-    }, onError: (Object e) {
-      cargando = false;
-      error = e.toString();
-      debugPrint('❌ Firestore [ventas]: $e');
-      notifyListeners();
-    });
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
+  final List<Venta> _ventas = List.of(MockData.ventas);
 
   List<Venta> get ventas =>
       List.unmodifiable(_ventas..sort((a, b) => b.fecha.compareTo(a.fecha)));
+
+  /// Ventas que puede ver el usuario: el administrador ve todas, el
+  /// vendedor solo las que registro el.
+  List<Venta> visiblesPara({required bool esAdmin, required String usuarioId}) {
+    final todas = ventas;
+    return esAdmin
+        ? todas
+        : todas.where((v) => v.vendedorId == usuarioId).toList();
+  }
+
+  static double totalHoyEn(List<Venta> lista) {
+    final hoy = DateTime.now();
+    return lista
+        .where((v) =>
+            v.fecha.year == hoy.year &&
+            v.fecha.month == hoy.month &&
+            v.fecha.day == hoy.day)
+        .fold(0.0, (suma, v) => suma + v.total);
+  }
 
   int get totalVentas => _ventas.length;
 
@@ -52,7 +43,8 @@ class VentaProvider extends ChangeNotifier {
         .fold(0.0, (suma, v) => suma + v.total);
   }
 
-  static double calcularIgv(double subtotal) => subtotal * AppConstants.igv;
+  static double calcularIgv(double subtotal) =>
+      Dinero.r2(subtotal * AppConstants.igv);
 
   String siguienteNumero(String comprobante) {
     final prefijo = comprobante == 'Factura' ? 'F' : 'B';
@@ -66,8 +58,12 @@ class VentaProvider extends ChangeNotifier {
     required List<ItemVenta> items,
     required String metodoPago,
     required String comprobante,
+    String vendedorId = '',
+    String vendedor = '',
+    double redondeo = 0,
   }) {
-    final subtotal = items.fold(0.0, (suma, i) => suma + i.subtotal);
+    final subtotal =
+        Dinero.r2(items.fold(0.0, (suma, i) => suma + i.subtotal));
     final igv = calcularIgv(subtotal);
 
     final venta = Venta(
@@ -77,16 +73,17 @@ class VentaProvider extends ChangeNotifier {
       items: items,
       subtotal: subtotal,
       igv: igv,
-      total: subtotal + igv,
+      total: Dinero.r2(subtotal + igv),
       metodoPago: metodoPago,
       comprobante: comprobante,
       fecha: DateTime.now(),
+      vendedorId: vendedorId,
+      vendedor: vendedor,
+      redondeo: redondeo,
     );
 
     _ventas.add(venta);
     notifyListeners();
-    unawaited(_fs.crear(
-        FirestoreService.colVentas, venta.id, Mapeadores.ventaAMapa(venta)));
     return venta;
   }
 }

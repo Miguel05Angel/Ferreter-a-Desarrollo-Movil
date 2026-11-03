@@ -117,7 +117,7 @@ class _ProductoPainter extends CustomPainter {
     canvas.drawOval(
       sombraRect,
       Paint()
-        ..color = Colors.black.withOpacity(0.25)
+        ..color = Colors.black.withValues(alpha: 0.25)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
     );
   }
@@ -133,7 +133,7 @@ class _ProductoPainter extends CustomPainter {
     canvas.drawRRect(
       rrect,
       Paint()
-        ..color = Colors.white.withOpacity(0.45)
+        ..color = Colors.white.withValues(alpha: 0.45)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
     );
   }
@@ -249,7 +249,7 @@ class _ProductoPainter extends CustomPainter {
         balde.width * 0.68, balde.height * 0.34);
     canvas.drawRRect(
       RRect.fromRectAndRadius(etiqueta, const Radius.circular(6)),
-      _paint(Colors.white.withOpacity(0.92)),
+      _paint(Colors.white.withValues(alpha: 0.92)),
     );
     canvas.drawRect(
       Rect.fromLTWH(etiqueta.left + 6, etiqueta.top + etiqueta.height * 0.3,
@@ -386,7 +386,7 @@ class _ProductoPainter extends CustomPainter {
         Rect.fromLTWH(cuerpo.right + 2 + i * 7.0, cuerpo.top - 4,
             12 + i * 6.0, cuerpo.height + 8),
         -math.pi / 2.4, math.pi / 1.2, false,
-        _paint(Colors.orange.withOpacity(0.6 - i * 0.15),
+        _paint(Colors.orange.withValues(alpha: 0.6 - i * 0.15),
             stroke: true, width: 2.5),
       );
     }
@@ -407,7 +407,7 @@ class _ProductoPainter extends CustomPainter {
       _paint(HSLColor.fromColor(color).withLightness(0.25).toColor()),
     );
     canvas.drawCircle(cuerpo.center, cuerpo.width * 0.14,
-        _paint(Colors.white.withOpacity(0.85)));
+        _paint(Colors.white.withValues(alpha: 0.85)));
     // Cinta saliendo
     final cinta = Rect.fromLTWH(
         cuerpo.center.dx, rect.bottom - rect.height * 0.22,
@@ -554,7 +554,7 @@ class _ProductoPainter extends CustomPainter {
         radio,
         _paint(i == 0
             ? HSLColor.fromColor(color).withLightness(0.3).toColor()
-            : color.withOpacity(0.95 - i * 0.08)),
+            : color.withValues(alpha: 0.95 - i * 0.08)),
       );
     }
     _brillo(canvas, Rect.fromCircle(center: centro, radius: rect.width * 0.4));
@@ -618,7 +618,7 @@ class _ProductoPainter extends CustomPainter {
     );
     canvas.drawRect(
       Rect.fromLTWH(boton.left + 3, boton.top + 4, boton.width - 6, 3),
-      _paint(Colors.white.withOpacity(0.7)),
+      _paint(Colors.white.withValues(alpha: 0.7)),
     );
   }
 
@@ -629,7 +629,7 @@ class _ProductoPainter extends CustomPainter {
       centro,
       rect.width * 0.34,
       Paint()
-        ..color = color.withOpacity(0.28)
+        ..color = color.withValues(alpha: 0.28)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
     );
     // Ampolleta
@@ -638,7 +638,7 @@ class _ProductoPainter extends CustomPainter {
       centro,
       focoRect.width / 2,
       _degradado(focoRect, color,
-          claro: Colors.white, oscuro: color.withOpacity(0.8)),
+          claro: Colors.white, oscuro: color.withValues(alpha: 0.8)),
     );
     _brillo(canvas, focoRect);
     // Base
@@ -680,7 +680,7 @@ class _ProductoPainter extends CustomPainter {
         bounds.width * 0.64, bounds.height * 0.36);
     canvas.drawRRect(
       RRect.fromRectAndRadius(etiqueta, const Radius.circular(6)),
-      _paint(Colors.white.withOpacity(0.9)),
+      _paint(Colors.white.withValues(alpha: 0.9)),
     );
     canvas.drawRect(
       Rect.fromLTWH(etiqueta.left + 6, etiqueta.top + 7,
@@ -786,7 +786,7 @@ class _ProductoPainter extends CustomPainter {
           Rect.fromLTWH(caja.left + 10, caja.top + 10,
               caja.width - 20, caja.height * 0.35),
           const Radius.circular(8)),
-      _paint(Colors.white.withOpacity(0.25)),
+      _paint(Colors.white.withValues(alpha: 0.25)),
     );
   }
 

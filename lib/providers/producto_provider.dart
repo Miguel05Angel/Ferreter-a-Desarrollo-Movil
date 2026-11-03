@@ -1,47 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
-import '../data/firestore_mappers.dart';
 import '../data/mock_data.dart';
 import '../data/models/categoria.dart';
 import '../data/models/producto.dart';
-import '../services/firestore_service.dart';
 
 class ProductoProvider extends ChangeNotifier {
-  final FirestoreService _fs = FirestoreService.instance;
-
-  List<Producto> _productos = [];
-  // Las categorias tienen icono y color, por eso se mantienen en la app.
+  final List<Producto> _productos = List.of(MockData.productos);
   final List<Categoria> _categorias = List.of(MockData.categorias);
-
-  StreamSubscription<List<Producto>>? _sub;
-  bool cargando = true;
-  String? error;
-
-  ProductoProvider() {
-    _sub = _fs
-        .escuchar<Producto>(
-            FirestoreService.colProductos, Mapeadores.productoDesde)
-        .listen((lista) {
-      _productos = lista;
-      cargando = false;
-      error = null;
-      notifyListeners();
-    }, onError: (Object e) {
-      cargando = false;
-      error = e.toString();
-      debugPrint('❌ Firestore [productos]: $e');
-      notifyListeners();
-    });
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    super.dispose();
-  }
 
   List<Producto> get productos => List.unmodifiable(_productos);
   List<Categoria> get categorias => List.unmodifiable(_categorias);
@@ -51,8 +17,8 @@ class ProductoProvider extends ChangeNotifier {
   int get productosStockBajo =>
       _productos.where((p) => p.stock <= AppConstants.stockBajo).length;
 
-  double get valorInventario =>
-      _productos.fold(0.0, (suma, p) => suma + p.precioVenta * p.stock);
+  double get valorInventario => _productos.fold(
+      0.0, (suma, p) => suma + p.precioVenta * p.stock);
 
   Categoria categoriaDe(String categoriaId) {
     return _categorias.firstWhere(
@@ -69,16 +35,13 @@ class ProductoProvider extends ChangeNotifier {
   }
 
   bool existeCodigo(String codigo, {String? ignorarId}) {
-    return _productos.any((p) =>
-        p.codigo.toLowerCase() == codigo.trim().toLowerCase() &&
-        p.id != ignorarId);
+    return _productos.any(
+        (p) => p.codigo.toLowerCase() == codigo.trim().toLowerCase() && p.id != ignorarId);
   }
 
   void agregar(Producto producto) {
     _productos.add(producto);
     notifyListeners();
-    unawaited(_fs.crear(FirestoreService.colProductos, producto.id,
-        Mapeadores.productoAMapa(producto)));
   }
 
   void actualizar(Producto producto) {
@@ -86,30 +49,55 @@ class ProductoProvider extends ChangeNotifier {
     if (index >= 0) {
       _productos[index] = producto;
       notifyListeners();
-      unawaited(_fs.guardar(FirestoreService.colProductos, producto.id,
-          Mapeadores.productoAMapa(producto)));
     }
   }
 
   void eliminar(String id) {
     _productos.removeWhere((p) => p.id == id);
     notifyListeners();
-    unawaited(_fs.eliminar(FirestoreService.colProductos, id));
+  }
+
+  /// Alertas urgentes de reposicion: se emiten cuando una venta deja un
+  /// producto en STOCK CRITICO (antes de agotarse) o AGOTADO.
+  final ValueNotifier<List<AlertaStock>> alertas = ValueNotifier(const []);
+
+  List<Producto> get criticos => _productos.where((p) => p.critico).toList();
+  List<Producto> get agotados => _productos.where((p) => p.agotado).toList();
+
+  @override
+  void dispose() {
+    alertas.dispose();
+    super.dispose();
   }
 
   /// Descuenta el stock despues de registrar una venta.
   void descontarStock(List<({String productoId, int cantidad})> items) {
+    final nuevas = <AlertaStock>[];
     for (final item in items) {
       final index = _productos.indexWhere((p) => p.id == item.productoId);
       if (index >= 0) {
         final actual = _productos[index];
         final nuevoStock = actual.stock - item.cantidad;
-        final stockFinal = nuevoStock < 0 ? 0 : nuevoStock;
-        _productos[index] = actual.copyWith(stock: stockFinal);
-        unawaited(_fs.guardar(FirestoreService.colProductos, actual.id,
-            {'stock': stockFinal}));
+        final despues =
+            actual.copyWith(stock: nuevoStock < 0 ? 0 : nuevoStock);
+        _productos[index] = despues;
+        // Alerta solo cuando cruza el limite (no en cada venta).
+        final cruzoMinimo = !actual.stockBajo && despues.stockBajo;
+        final seAgoto = !actual.agotado && despues.agotado;
+        if (cruzoMinimo || seAgoto) {
+          nuevas.add(AlertaStock(despues));
+        }
       }
     }
     notifyListeners();
+    if (nuevas.isNotEmpty) alertas.value = nuevas;
   }
+}
+
+
+/// Aviso de reposicion: [producto.agotado] indica si ya no quedan unidades.
+class AlertaStock {
+  final Producto producto;
+  const AlertaStock(this.producto);
+  bool get agotado => producto.agotado;
 }

@@ -49,7 +49,7 @@ class CategoryCard extends StatelessWidget {
                   child: Transform.translate(
                     offset: Offset(t.dx * -6, t.dy * -6),
                     child: Icon(categoria.icono,
-                        size: 84, color: categoria.color.withOpacity(0.10)),
+                        size: 84, color: categoria.color.withValues(alpha: 0.10)),
                   ),
                 ),
                 Padding(
@@ -61,7 +61,7 @@ class CategoryCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
-                          color: categoria.color.withOpacity(0.14),
+                          color: categoria.color.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(categoria.icono,

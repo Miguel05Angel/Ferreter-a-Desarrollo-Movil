@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../media/producto_imagen.dart';
+
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/categoria.dart';
 import '../../../data/models/producto.dart';
@@ -56,8 +58,8 @@ class ProductCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          categoria.color.withOpacity(0.10),
-                          categoria.color.withOpacity(0.22),
+                          categoria.color.withValues(alpha: 0.10),
+                          categoria.color.withValues(alpha: 0.22),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -69,11 +71,7 @@ class ProductCard extends StatelessWidget {
                       offset: Offset(t.dx * -6, t.dy * -6),
                       child: Transform.scale(
                         scale: 1 + t.distance * 0.14,
-                        child: ProductoIlustracion(
-                          tipo: producto.tipoVisual,
-                          colorHex: producto.colorHex,
-                          size: 56,
-                        ),
+                        child: ProductoImagen(producto: producto, size: 56),
                       ),
                     ),
                   ),
@@ -101,7 +99,7 @@ class ProductCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: stockColor.withOpacity(0.12),
+                        color: stockColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

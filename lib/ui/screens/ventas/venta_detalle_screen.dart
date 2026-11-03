@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/cliente.dart';
@@ -7,7 +9,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/cliente_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
-import '../../widgets/comprobante/comprobante_view.dart';
+import '../../widgets/comprobante/comprobante_acciones.dart';
 
 /// Muestra el comprobante electronico de una venta.
 class VentaDetalleScreen extends StatelessWidget {
@@ -29,9 +31,9 @@ class VentaDetalleScreen extends StatelessWidget {
     }
 
     if (venta == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Comprobante')),
-        body: const Center(child: Text('Venta no encontrada.')),
+      return const Scaffold(
+        appBar: AppBarTaller(subtitulo: 'Documento', title: Text('Comprobante')),
+        body: Center(child: Text('Venta no encontrada.')),
       );
     }
 
@@ -44,13 +46,13 @@ class VentaDetalleScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('${venta.comprobante} ${venta.numero}')),
+      appBar: AppBarTaller(title: Text('${venta.comprobante} ${venta.numero}')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         children: [
           FadeSlide(
             inicio: const Offset(0, 0.25),
-            child: ComprobanteView(
+            child: ComprobanteConAcciones(
               venta: venta,
               cliente: cliente,
               vendedor: usuario?.nombre.split(' ').first ?? 'Caja 01',

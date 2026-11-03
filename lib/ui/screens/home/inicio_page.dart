@@ -1,29 +1,38 @@
 import 'package:flutter/material.dart';
+
+import '../../widgets/media/producto_imagen.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/permisos.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/categoria.dart';
 import '../../../data/models/producto.dart';
-import '../../../data/models/venta.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/cliente_provider.dart';
+import '../../../providers/cotizacion_provider.dart';
+import '../../../providers/proveedor_provider.dart';
 import '../../../providers/producto_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/cards/category_card.dart';
+import '../../widgets/carrito/carrito_flotante.dart';
+import '../../widgets/inputs/buscador_productos.dart';
+import '../../widgets/feedback/reportar_faltante_dialog.dart';
+import '../welcome/welcome_screen.dart';
 import '../../widgets/layout/section_header.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/producto_illustration.dart';
 import '../../widgets/visual/tilt_3d.dart';
 import '../categorias/categorias_screen.dart';
 import '../clientes/clientes_page.dart';
+import '../cotizaciones/cotizacion_form_screen.dart';
 import '../cotizaciones/cotizaciones_page.dart';
 import '../main/main_shell_screen.dart';
 import '../productos/producto_detalle_screen.dart';
+import '../productos/reposicion_screen.dart';
 import '../proveedores/proveedores_page.dart';
-import '../ventas/venta_detalle_screen.dart';
 
 Color _naranjaTexto(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
@@ -58,8 +67,13 @@ class InicioPage extends StatelessWidget {
     final clientes = context.watch<ClienteProvider>();
     final ventas = context.watch<VentaProvider>();
     final usuario = context.watch<AuthProvider>().usuarioActual;
+    final permisos = Permisos.de(context);
+    final cotizaciones = context.watch<CotizacionProvider>();
+    final proveedores = context.watch<ProveedorProvider>();
+    final misVentas = ventas.visiblesPara(
+        esAdmin: permisos.esAdmin, usuarioId: usuario?.id ?? '');
 
-    final stockBajo = productos.productos.where((p) => p.stock <= 5).toList();
+    final stockBajo = productos.productos.where((p) => p.stockBajo).toList();
     final destacados = _destacados(productos.productos);
     final nombre = usuario?.nombre.split(' ').first ?? 'Invitado';
     final inicial = (usuario?.nombre.isNotEmpty ?? false)
@@ -125,9 +139,35 @@ class InicioPage extends StatelessWidget {
                                         color: AppTheme.hueso,
                                       ),
                                     ),
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: permisos.esAdmin
+                                            ? AppTheme.amarilloSenal
+                                            : const Color(0xFF2E3A44),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        (usuario?.rol ?? 'Vendedor')
+                                            .toUpperCase(),
+                                        style: TextStyle(
+                                          fontFamily: 'monospace',
+                                          fontSize: 10,
+                                          letterSpacing: 1.6,
+                                          fontWeight: FontWeight.w900,
+                                          color: permisos.esAdmin
+                                              ? AppTheme.grafito
+                                              : AppTheme.hueso,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
+                              const BotonCarrito(),
+                              const SizedBox(width: 6),
                               Container(
                                 width: 50,
                                 height: 50,
@@ -164,12 +204,12 @@ class InicioPage extends StatelessWidget {
                                     mainAxisAlignment:
                                         MainAxisAlignment.center,
                                     children: [
-                                      const _Mono('VENTAS DE HOY',
-                                          Color(0x99EDE8DF)),
+                                      _Mono(permisos.esAdmin ? 'VENTAS DE HOY' : 'MIS VENTAS DE HOY',
+                                          const Color(0x99EDE8DF)),
                                       const SizedBox(height: 4),
                                       TweenAnimationBuilder<double>(
                                         tween:
-                                            Tween(begin: 0, end: ventas.totalHoy),
+                                            Tween(begin: 0, end: VentaProvider.totalHoyEn(misVentas)),
                                         duration:
                                             const Duration(milliseconds: 1500),
                                         curve: Curves.easeOutCubic,
@@ -234,10 +274,28 @@ class InicioPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ============================================ buscador
+                const SizedBox(height: 20),
+                const FadeSlide(
+                  delay: Duration(milliseconds: 200),
+                  child: BuscadorProductos(),
+                ),
+                const FadeSlide(
+                  delay: Duration(milliseconds: 260),
+                  child: BotonReportarFaltante(),
+                ),
+                FadeSlide(
+                  delay: const Duration(milliseconds: 320),
+                  child: _BotonAsistente(
+                    onTap: () =>
+                        AppRoutes.push(context, const WelcomeScreen()),
+                  ),
+                ),
+
                 // ============================================ destacados
                 if (destacados.isNotEmpty) ...[
                   SectionHeader(
-                    titulo: 'Destacados',
+                    titulo: 'Lo más recomendado en calidad y precio',
                     textoAccion: 'Ver todo',
                     onAccion: () => ShellNavegacion.irA(1),
                   ),
@@ -300,45 +358,27 @@ class InicioPage extends StatelessWidget {
                   ),
                 ),
 
-                // ======================================= accesos rapidos
-                const SectionHeader(titulo: 'Accesos rapidos'),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 2.6,
-                  children: [
-                    _Acceso(
-                      icono: Icons.point_of_sale,
-                      texto: 'Nueva venta',
-                      destacado: true,
-                      color: AppTheme.primary,
-                      onTap: () => ShellNavegacion.irA(3),
-                    ),
-                    _Acceso(
-                      icono: Icons.people_alt_outlined,
-                      texto: 'Clientes',
-                      color: const Color(0xFF546E7A),
-                      onTap: () =>
-                          AppRoutes.push(context, const ClientesPage()),
-                    ),
-                    _Acceso(
-                      icono: Icons.local_shipping_outlined,
-                      texto: 'Proveedores',
-                      color: const Color(0xFF0277BD),
-                      onTap: () =>
-                          AppRoutes.push(context, const ProveedoresPage()),
-                    ),
-                    _Acceso(
-                      icono: Icons.request_quote_outlined,
-                      texto: 'Cotizaciones',
-                      color: const Color(0xFFF9A825),
-                      onTap: () =>
-                          AppRoutes.push(context, const CotizacionesPage()),
-                    ),
-                  ],
+                // ============================================ cotizaciones
+                const SectionHeader(titulo: 'Cotizaciones'),
+                _TarjetaCotizaciones(
+                  total: cotizaciones.totalCotizaciones,
+                  onAbrir: () =>
+                      AppRoutes.push(context, const CotizacionesPage()),
+                  onNueva: () =>
+                      AppRoutes.push(context, const CotizacionFormScreen()),
+                ),
+
+                // ============================================== comunidad
+                const SectionHeader(titulo: 'Comunidad'),
+                _TarjetaComunidad(
+                  clientes: clientes.totalClientes,
+                  proveedores: permisos.puedeVerProveedores
+                      ? proveedores.totalProveedores
+                      : null,
+                  onClientes: () =>
+                      AppRoutes.push(context, const ClientesPage()),
+                  onProveedores: () =>
+                      AppRoutes.push(context, const ProveedoresPage()),
                 ),
 
                 // ========================================= alertas stock
@@ -349,7 +389,7 @@ class InicioPage extends StatelessWidget {
                     onAccion: () => ShellNavegacion.irA(1),
                   ),
                   SizedBox(
-                    height: 218,
+                    height: 262,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.only(right: 4),
@@ -360,6 +400,11 @@ class InicioPage extends StatelessWidget {
                         inicio: const Offset(0.35, 0),
                         child: _TarjetaAlerta(
                           producto: stockBajo[i],
+                          puedeReponer: permisos.puedeSolicitarReposicion,
+                          onReponer: () => AppRoutes.push(
+                            context,
+                            ReposicionScreen(productoId: stockBajo[i].id),
+                          ),
                           onTap: () => AppRoutes.push(
                             context,
                             ProductoDetalleScreen(productoId: stockBajo[i].id),
@@ -370,29 +415,6 @@ class InicioPage extends StatelessWidget {
                   ),
                 ],
 
-                // ========================================== ultimas ventas
-                SectionHeader(
-                  titulo: 'Ultimas ventas',
-                  textoAccion: 'Ver todo',
-                  onAccion: () => ShellNavegacion.irA(2),
-                ),
-                if (ventas.ventas.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text('Aun no hay ventas registradas.',
-                        style: TextStyle(color: Colors.grey.shade600)),
-                  )
-                else
-                  FadeSlide(
-                    inicio: const Offset(0, 0.2),
-                    child: _LibroVentas(
-                      ventas: ventas.ventas.take(4).toList(),
-                      onTap: (v) => AppRoutes.push(
-                        context,
-                        VentaDetalleScreen(ventaId: v.id),
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 28),
               ],
             ),
@@ -529,12 +551,7 @@ class _TarjetaDestacado extends StatelessWidget {
                           offset: Offset(t.dx * -9, t.dy * -9),
                           child: Transform.scale(
                             scale: 1 + t.distance * 0.12,
-                            child: ProductoEstatico(
-                              tipo: producto.tipoVisual,
-                              colorHex: producto.colorHex,
-                              size: 100,
-                              sombra: true,
-                            ),
+                            child: ProductoImagen(producto: producto, size: 100, sombra: true),
                           ),
                         ),
                       ),
@@ -576,73 +593,105 @@ class _TarjetaDestacado extends StatelessWidget {
   }
 }
 
-class _Acceso extends StatelessWidget {
-  final IconData icono;
-  final String texto;
-  final Color color;
-  final bool destacado;
-  final VoidCallback onTap;
+/// Acceso principal y siempre a la mano a las cotizaciones.
+class _TarjetaCotizaciones extends StatelessWidget {
+  final int total;
+  final VoidCallback onAbrir;
+  final VoidCallback onNueva;
 
-  const _Acceso({
-    required this.icono,
-    required this.texto,
-    required this.color,
-    required this.onTap,
-    this.destacado = false,
+  const _TarjetaCotizaciones({
+    required this.total,
+    required this.onAbrir,
+    required this.onNueva,
   });
 
   @override
   Widget build(BuildContext context) {
-    final oscuro = Theme.of(context).brightness == Brightness.dark;
-    final fondo = destacado ? AppTheme.primary : Theme.of(context).cardColor;
-    final tinta = destacado ? AppTheme.grafito : null;
-
     return Tilt3D(
-      anguloMax: 0.14,
-      radioBorde: 14,
+      anguloMax: 0.08,
+      radioBorde: 18,
       builder: (context, t) => Material(
-        color: fondo,
+        color: AppTheme.primary,
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(
-            color: destacado
-                ? AppTheme.primary
-                : (oscuro ? AppTheme.bordeOscuro : AppTheme.bordeClaro),
-          ),
+        shape: const BeveledRectangleBorder(
+          borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(6), bottomRight: Radius.circular(22)),
         ),
+        elevation: 4,
+        shadowColor: AppTheme.primary.withOpacity(0.5),
         child: InkWell(
-          onTap: onTap,
+          onTap: onAbrir,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
             child: Row(
               children: [
                 Container(
-                  width: 38,
-                  height: 38,
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
-                    color: destacado
-                        ? AppTheme.grafito
-                        : color.withOpacity(0.14),
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.grafito,
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Transform.translate(
                     offset: Offset(t.dx * -3, t.dy * -3),
-                    child: Icon(icono,
-                        size: 21,
-                        color: destacado ? AppTheme.primary : color),
+                    child: const Icon(Icons.request_quote,
+                        size: 30, color: AppTheme.primary),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 Expanded(
-                  child: Text(
-                    texto,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: tinta),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'COTIZACIONES',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 15,
+                          letterSpacing: 1.6,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.grafito,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        total == 0
+                            ? 'Crea, edita y comparte presupuestos en PDF'
+                            : '$total ${total == 1 ? 'presupuesto' : 'presupuestos'}  |  buscalos por DNI o RUC',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.25,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xE615181B)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Material(
+                  color: AppTheme.grafito,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: onNueva,
+                    child: const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 18, color: AppTheme.primary),
+                          SizedBox(width: 3),
+                          Text('NUEVA',
+                              style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                  letterSpacing: 1,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.primary)),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -654,13 +703,149 @@ class _Acceso extends StatelessWidget {
   }
 }
 
+/// Clientes y proveedores reunidos en un solo modulo.
+class _TarjetaComunidad extends StatelessWidget {
+  final int clientes;
+  final int? proveedores; // null = sin permiso
+  final VoidCallback onClientes;
+  final VoidCallback onProveedores;
+
+  const _TarjetaComunidad({
+    required this.clientes,
+    required this.proveedores,
+    required this.onClientes,
+    required this.onProveedores,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
+    final borde = oscuro ? AppTheme.bordeOscuro : AppTheme.bordeClaro;
+
+    Widget mitad({
+      required IconData icono,
+      required Color color,
+      required String titulo,
+      required String detalle,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.14),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icono, color: color, size: 23),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titulo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 14.5, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 2),
+                      Text(detalle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 11.5, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borde),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            color: AppTheme.grafito,
+            child: const Row(
+              children: [
+                Icon(Icons.groups_2_outlined,
+                    size: 17, color: AppTheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  'TU RED DE CONTACTOS',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10.5,
+                    letterSpacing: 1.6,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xCCEDE8DF),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                mitad(
+                  icono: Icons.people_alt_outlined,
+                  color: const Color(0xFF546E7A),
+                  titulo: 'Clientes',
+                  detalle: '$clientes registrados',
+                  onTap: onClientes,
+                ),
+                if (proveedores != null) ...[
+                  VerticalDivider(width: 1, color: borde),
+                  mitad(
+                    icono: Icons.local_shipping_outlined,
+                    color: const Color(0xFF0277BD),
+                    titulo: 'Proveedores',
+                    detalle: '$proveedores registrados',
+                    onTap: onProveedores,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Tarjeta de alerta: oscura, con franja de obra, producto flotando sobre
 /// un halo rojo y un medidor segmentado del stock que queda.
 class _TarjetaAlerta extends StatelessWidget {
   final Producto producto;
+  final bool puedeReponer;
+  final VoidCallback onReponer;
   final VoidCallback onTap;
 
-  const _TarjetaAlerta({required this.producto, required this.onTap});
+  const _TarjetaAlerta({
+    required this.producto,
+    required this.puedeReponer,
+    required this.onReponer,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -737,12 +922,7 @@ class _TarjetaAlerta extends StatelessWidget {
                         ),
                         Transform.translate(
                           offset: Offset(t.dx * -8, t.dy * -8),
-                          child: ProductoEstatico(
-                            tipo: producto.tipoVisual,
-                            colorHex: producto.colorHex,
-                            size: 78,
-                            sombra: true,
-                          ),
+                          child: ProductoImagen(producto: producto, size: 78, sombra: true),
                         ),
                       ],
                     ),
@@ -793,6 +973,16 @@ class _TarjetaAlerta extends StatelessWidget {
                             letterSpacing: 1,
                             fontWeight: FontWeight.w800,
                             color: rojo,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'TOCA PARA VER LA FICHA',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 9.5,
+                            letterSpacing: 0.8,
+                            color: Color(0x99EDE8DF),
                           ),
                         ),
                       ],
@@ -857,183 +1047,41 @@ class _PuntoAlertaState extends State<_PuntoAlerta>
   }
 }
 
-/// Libro de caja: un solo panel con el resumen (total y grafico de barras)
-/// y las ventas como filas separadas por lineas finas.
-class _LibroVentas extends StatelessWidget {
-  final List<Venta> ventas;
-  final ValueChanged<Venta> onTap;
-
-  const _LibroVentas({required this.ventas, required this.onTap});
+/// Acceso directo al asistente ferretero, justo debajo del buscador.
+class _BotonAsistente extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BotonAsistente({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final total = ventas.fold<double>(0, (a, v) => a + v.total);
-    final maximo = ventas.fold<double>(1, (a, v) => v.total > a ? v.total : a);
-
     return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: const ShapeDecoration(
+      margin: const EdgeInsets.only(top: 4),
+      child: Material(
         color: AppTheme.grafito,
-        shape: BeveledRectangleBorder(
-          borderRadius: BorderRadius.only(bottomRight: Radius.circular(26)),
+        shape: const BeveledRectangleBorder(
+          borderRadius: BorderRadius.only(bottomRight: Radius.circular(16)),
+          side: BorderSide(color: AppTheme.primary, width: 1.6),
         ),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ULTIMAS ${ventas.length} VENTAS',
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 10.5,
-                          letterSpacing: 1.8,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0x99EDE8DF),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: total),
-                        duration: const Duration(milliseconds: 1200),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, v, _) => FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            Formatters.soles(v),
-                            style: const TextStyle(
-                              fontSize: 30,
-                              height: 1.0,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                              color: AppTheme.primary,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                const Icon(Icons.auto_awesome, color: AppTheme.primary, size: 22),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text('✨ Recomiéndame qué comprar para mi obra',
+                      style: TextStyle(
+                          color: AppTheme.hueso,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14)),
                 ),
-                // Barras proporcionales a cada venta
-                SizedBox(
-                  width: 110,
-                  height: 46,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      for (var i = 0; i < ventas.length; i++)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(
-                                begin: 0,
-                                end: (ventas[i].total / maximo)
-                                    .clamp(0.12, 1.0)
-                                    .toDouble()),
-                            duration: Duration(milliseconds: 700 + i * 150),
-                            curve: Curves.easeOutBack,
-                            builder: (context, v, _) => Container(
-                              width: 16,
-                              height: 46 * v,
-                              decoration: BoxDecoration(
-                                color: i == 0
-                                    ? AppTheme.primary
-                                    : const Color(0xFF3A4148),
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                const Icon(Icons.arrow_forward, color: AppTheme.primary, size: 20),
               ],
             ),
           ),
-          const FranjaPeligro(alto: 5),
-          for (var i = 0; i < ventas.length; i++) ...[
-            FadeSlide(
-              delay: Duration(milliseconds: 150 + i * 90),
-              inicio: const Offset(0.2, 0),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () => onTap(ventas[i]),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
-                    child: Row(
-                      children: [
-                        Text(
-                          (i + 1).toString().padLeft(2, '0'),
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                ventas[i].clienteNombre,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTheme.hueso,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${ventas[i].numero}  -  ${ventas[i].metodoPago.toUpperCase()}  -  ${Formatters.fechaCorta(ventas[i].fecha)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 10,
-                                  color: Color(0x80EDE8DF),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          Formatters.soles(ventas[i].total),
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.hueso,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (i < ventas.length - 1)
-              const Divider(
-                  height: 1,
-                  indent: 18,
-                  endIndent: 18,
-                  color: Color(0xFF2C3339)),
-          ],
-          const SizedBox(height: 6),
-        ],
+        ),
       ),
     );
   }
