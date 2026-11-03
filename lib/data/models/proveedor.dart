@@ -4,6 +4,9 @@ class Proveedor {
   final String ruc;
   final String telefono;
   final String direccion;
+
+  /// Punto de referencia (ej: a la espalda del parque, porton azul).
+  final String referencia;
   final List<String> productos;
   final double? latitud;
   final double? longitud;
@@ -14,6 +17,7 @@ class Proveedor {
     required this.ruc,
     required this.telefono,
     required this.direccion,
+    this.referencia = '',
     this.productos = const [],
     this.latitud,
     this.longitud,
@@ -25,6 +29,7 @@ class Proveedor {
     String? ruc,
     String? telefono,
     String? direccion,
+    String? referencia,
     List<String>? productos,
     double? latitud,
     double? longitud,
@@ -35,6 +40,7 @@ class Proveedor {
       ruc: ruc ?? this.ruc,
       telefono: telefono ?? this.telefono,
       direccion: direccion ?? this.direccion,
+      referencia: referencia ?? this.referencia,
       productos: productos ?? this.productos,
       latitud: latitud ?? this.latitud,
       longitud: longitud ?? this.longitud,

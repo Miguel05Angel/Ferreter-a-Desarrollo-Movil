@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import 'editable_cantidad.dart';
 
 /// Selector de cantidad con botones animados +/- .
 class QuantitySelector extends StatefulWidget {
@@ -46,7 +47,7 @@ class _QuantitySelectorState extends State<QuantitySelector> {
           height: 32,
           decoration: BoxDecoration(
             color: onTap == null
-                ? Colors.grey.withOpacity(0.25)
+                ? Colors.grey.withValues(alpha: 0.25)
                 : AppTheme.primary,
             borderRadius: BorderRadius.circular(8),
           ),
@@ -80,7 +81,11 @@ class _QuantitySelectorState extends State<QuantitySelector> {
             presionado: _restarPresionado,
             alCambiar: (v) => setState(() => _restarPresionado = v),
           ),
-          SizedBox(
+          EditableCantidad(
+            valor: widget.valor,
+            maximo: widget.maximo,
+            onCambio: widget.onCambio,
+            child: SizedBox(
             width: 40,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
@@ -96,7 +101,7 @@ class _QuantitySelectorState extends State<QuantitySelector> {
                     fontWeight: FontWeight.w900),
               ),
             ),
-          ),
+          )),
           _boton(
             icono: Icons.add,
             onTap: widget.valor < widget.maximo

@@ -119,7 +119,7 @@ class _Vista360State extends State<Vista360> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  color: AppTheme.grafito.withOpacity(0.85),
+                  color: AppTheme.grafito.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(

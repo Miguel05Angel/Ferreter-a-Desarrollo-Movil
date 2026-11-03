@@ -29,8 +29,8 @@ class ProveedoresPage extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBarTaller(
-          subtitulo: 'Abastecimiento', title: const Text('Proveedores')),
+      appBar: const AppBarTaller(
+          subtitulo: 'Abastecimiento', title: Text('Proveedores')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AppRoutes.push(context, const ProveedorFormScreen()),
         icon: const Icon(Icons.local_shipping_outlined),
@@ -154,7 +154,7 @@ class _FichaProveedorState extends State<_FichaProveedor> {
             shadows: [
               BoxShadow(
                 color: _abierta
-                    ? AppTheme.primary.withOpacity(0.22)
+                    ? AppTheme.primary.withValues(alpha: 0.22)
                     : const Color(0x22000000),
                 blurRadius: _abierta ? 18 : 8,
                 offset: const Offset(0, 5),
@@ -376,11 +376,11 @@ class _Detalle extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0277BD).withOpacity(0.10),
+                          color: const Color(0xFF0277BD).withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                               color:
-                                  const Color(0xFF0277BD).withOpacity(0.25)),
+                                  const Color(0xFF0277BD).withValues(alpha: 0.25)),
                         ),
                         child: Text(
                           p.productos[i],
@@ -466,7 +466,7 @@ class _Insignia extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(5),
       ),
       child: Row(
@@ -506,11 +506,11 @@ class _Accion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withOpacity(0.10),
+      color: color.withValues(alpha: 0.10),
       shape: BeveledRectangleBorder(
         borderRadius:
             const BorderRadius.only(bottomRight: Radius.circular(12)),
-        side: BorderSide(color: color.withOpacity(0.55), width: 1.2),
+        side: BorderSide(color: color.withValues(alpha: 0.55), width: 1.2),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

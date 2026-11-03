@@ -33,6 +33,9 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
   late final TextEditingController _precioVenta;
   late final TextEditingController _precioCompra;
   late final TextEditingController _stock;
+  late final TextEditingController _stockMin;
+  late final TextEditingController _fuente;
+  late final TextEditingController _urlFuente;
   String? _categoriaId;
   String _unidad = AppConstants.unidades.first;
   bool _cargando = false;
@@ -54,6 +57,9 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
             ? ''
             : '${p.precioCompra}');
     _stock = TextEditingController(text: p == null ? '' : '${p.stock}');
+    _stockMin = TextEditingController(text: '${p?.stockMinimo ?? 5}');
+    _fuente = TextEditingController(text: p?.fuente ?? '');
+    _urlFuente = TextEditingController(text: p?.urlFuente ?? '');
     _categoriaId = p?.categoriaId;
     _unidad = p?.unidad ?? AppConstants.unidades.first;
     for (final x in [
@@ -63,7 +69,10 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
       _marca,
       _precioVenta,
       _precioCompra,
-      _stock
+      _stock,
+      _stockMin,
+      _fuente,
+      _urlFuente
     ]) {
       x.addListener(_alCambiar);
     }
@@ -80,6 +89,9 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
     _precioVenta.dispose();
     _precioCompra.dispose();
     _stock.dispose();
+    _stockMin.dispose();
+    _fuente.dispose();
+    _urlFuente.dispose();
     super.dispose();
   }
 
@@ -103,7 +115,22 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
     k.numero('Precio de venta', p.precioVenta, _precioVenta.text);
     k.numero('Precio de compra', p.precioCompra, _precioCompra.text);
     k.numero('Stock', p.stock, _stock.text, decimales: 0);
+    k.numero('Stock minimo', p.stockMinimo, _stockMin.text, decimales: 0);
+    k.texto('Fuente del precio', p.fuente, _fuente.text);
     return k.cambios;
+  }
+
+  /// Fecha en que se verifico el precio: se conserva si no cambio nada.
+  DateTime _fechaVerificacion() {
+    final p = widget.producto;
+    final precio = double.tryParse(_precioVenta.text.trim());
+    if (p != null &&
+        p.fechaPrecio != null &&
+        p.fuente == _fuente.text.trim() &&
+        p.precioVenta == precio) {
+      return p.fechaPrecio!;
+    }
+    return DateTime.now();
   }
 
   Future<void> _guardar() async {
@@ -156,6 +183,11 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
       precioVenta: double.parse(_precioVenta.text.trim()),
       precioCompra: double.tryParse(_precioCompra.text.trim()) ?? 0,
       stock: int.parse(_stock.text.trim()),
+      stockMinimo: int.tryParse(_stockMin.text.trim()) ?? 5,
+      fuente: _fuente.text.trim(),
+      urlFuente: _urlFuente.text.trim(),
+      fechaPrecio:
+          _fuente.text.trim().isEmpty ? null : _fechaVerificacion(),
     );
     // Al editar se conservan la ilustracion 3D y los colores del producto
     final nuevo = widget.producto == null
@@ -170,6 +202,10 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
             precioVenta: base.precioVenta,
             precioCompra: base.precioCompra,
             stock: base.stock,
+            stockMinimo: base.stockMinimo,
+            fuente: base.fuente,
+            urlFuente: base.urlFuente,
+            fechaPrecio: base.fechaPrecio,
           );
 
     if (_esEdicion) {
@@ -254,7 +290,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
               const SizedBox(height: 20),
 
               // Categoria
-              _Etiqueta('Categoria'),
+              const _Etiqueta('Categoria'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _categoriaId,
@@ -283,7 +319,7 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Etiqueta('Unidad de medida'),
+                        const _Etiqueta('Unidad de medida'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<String>(
                           initialValue: _unidad,
@@ -340,6 +376,33 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 22),
+              const _Etiqueta('Alerta de stock y origen del precio'),
+              const SizedBox(height: 8),
+              CustomTextField(
+                etiqueta: 'Stock minimo (alerta)',
+                icono: Icons.notification_important_outlined,
+                controlador: _stockMin,
+                formateadores: Formatos.digitos(4),
+                tipoTeclado: TextInputType.number,
+                ayuda: 'Al llegar a esta cantidad se envia la alerta de reposicion',
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                etiqueta: 'Fuente del precio',
+                icono: Icons.storefront_outlined,
+                controlador: _fuente,
+                formateadores: Formatos.texto(60),
+                ayuda: 'Tienda donde lo verificaste: Promart, Sodimac, Maestro, local...',
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                etiqueta: 'Enlace de la fuente (opcional)',
+                icono: Icons.link,
+                controlador: _urlFuente,
+                formateadores: Formatos.texto(200),
+                tipoTeclado: TextInputType.url,
               ),
               const SizedBox(height: 32),
               AccionesFormulario(

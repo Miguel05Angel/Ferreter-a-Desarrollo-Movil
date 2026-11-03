@@ -302,7 +302,7 @@ class _RegistrarCotizacionScreenState extends State<RegistrarCotizacionScreen> {
                             borderRadius: const BorderRadius.only(
                                 bottomRight: Radius.circular(20)),
                             side: BorderSide(
-                                color: AppTheme.primary.withOpacity(0.6)),
+                                color: AppTheme.primary.withValues(alpha: 0.6)),
                           ),
                         ),
                         child: Column(

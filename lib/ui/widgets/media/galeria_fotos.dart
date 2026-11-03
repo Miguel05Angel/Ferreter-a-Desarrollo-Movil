@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../services/media_service.dart';
 
-/// Fotografias reales del producto (frontal, posterior y detalles). Se desliza
-/// entre fotos y se hace zoom con dos dedos.
 class GaleriaFotos extends StatefulWidget {
   final List<String> ids;
 
@@ -33,20 +31,32 @@ class _GaleriaFotosState extends State<GaleriaFotos> {
           controller: _pagina,
           itemCount: widget.ids.length,
           onPageChanged: (i) => setState(() => _actual = i),
-          itemBuilder: (context, i) => InteractiveViewer(
-            minScale: 1,
-            maxScale: 4,
-            child: CachedNetworkImage(
-              imageUrl: MediaService.urlImagen(widget.ids[i], ancho: 1200),
-              fit: BoxFit.contain,
-              placeholder: (_, __) =>
-                  const Center(child: CircularProgressIndicator()),
-              errorWidget: (_, __, ___) => const Center(
-                child: Icon(Icons.broken_image_outlined,
-                    size: 48, color: Color(0x80EDE8DF)),
+          itemBuilder: (context, i) {
+            // Aquí se obtiene el enlace de ImgBB desde el JSON
+            final urlReal = MediaService.urlImagen(widget.ids[i], ancho: 1200);
+            
+            // ESPÍA: Esto nos dirá en la consola qué URL está usando la app
+            print('🖼️ INTENTANDO CARGAR: $urlReal');
+            
+            return InteractiveViewer(
+              minScale: 1,
+              maxScale: 4,
+              child: CachedNetworkImage(
+                imageUrl: urlReal,
+                fit: BoxFit.contain,
+                placeholder: (_, __) => const Center(child: CircularProgressIndicator()),
+                errorWidget: (context, url, error) {
+                  // ESTO NOS DIRÁ LA VERDAD EN LA CONSOLA
+                  print('🚨 ERROR EN: $url');
+                  print('🚨 DETALLE: $error');
+                  return const Center(
+                    child: Icon(Icons.broken_image_outlined,
+                        size: 48, color: Color(0x80EDE8DF)),
+                  );
+                },
               ),
-            ),
-          ),
+            );
+          },
         ),
         if (widget.ids.length > 1)
           Positioned(

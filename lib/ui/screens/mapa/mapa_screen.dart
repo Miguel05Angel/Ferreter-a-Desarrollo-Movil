@@ -579,14 +579,14 @@ class _MapaScreenState extends State<MapaScreen>
             bottom: 14,
             child: Container(
               padding: const EdgeInsets.all(16),
-              decoration: ShapeDecoration(
+              decoration: const ShapeDecoration(
                 color: AppTheme.grafito,
-                shape: const BeveledRectangleBorder(
+                shape: BeveledRectangleBorder(
                   borderRadius:
                       BorderRadius.only(bottomRight: Radius.circular(24)),
                   side: BorderSide(color: AppTheme.primary, width: 1.6),
                 ),
-                shadows: const [
+                shadows: [
                   BoxShadow(
                       color: Color(0x66000000),
                       blurRadius: 16,
@@ -631,7 +631,7 @@ class _MapaScreenState extends State<MapaScreen>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.amarilloSenal.withOpacity(0.14),
+                        color: AppTheme.amarilloSenal.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
@@ -650,7 +650,7 @@ class _MapaScreenState extends State<MapaScreen>
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _LeyendaPin(
+                        const _LeyendaPin(
                             icono: Icons.storefront,
                             color: AppTheme.primary,
                             texto: 'TIENDA'),
@@ -726,13 +726,13 @@ class _BotonMapa extends StatelessWidget {
       child: Container(
         width: 42,
         height: 42,
-        decoration: ShapeDecoration(
+        decoration: const ShapeDecoration(
           color: AppTheme.grafito,
-          shape: const BeveledRectangleBorder(
+          shape: BeveledRectangleBorder(
             borderRadius: BorderRadius.only(bottomRight: Radius.circular(12)),
             side: BorderSide(color: AppTheme.primary, width: 1.4),
           ),
-          shadows: const [
+          shadows: [
             BoxShadow(color: Color(0x55000000), blurRadius: 8),
           ],
         ),

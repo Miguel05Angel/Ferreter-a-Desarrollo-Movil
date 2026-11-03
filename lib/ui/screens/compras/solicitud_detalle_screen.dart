@@ -71,10 +71,10 @@ class _SolicitudDetalleScreenState extends State<SolicitudDetalleScreen> {
     if (s == null) {
       return Theme(
         data: _tema,
-        child: Scaffold(
+        child: const Scaffold(
           appBar: AppBarTaller(
-              mostrarCarrito: false, title: const Text('Solicitud')),
-          body: const Center(child: Text('La solicitud ya no existe.')),
+              mostrarCarrito: false, title: Text('Solicitud')),
+          body: Center(child: Text('La solicitud ya no existe.')),
         ),
       );
     }
@@ -424,7 +424,7 @@ class _Caja extends StatelessWidget {
         shape: BeveledRectangleBorder(
           borderRadius:
               const BorderRadius.only(bottomRight: Radius.circular(22)),
-          side: BorderSide(color: acento.withOpacity(0.55), width: 1.4),
+          side: BorderSide(color: acento.withValues(alpha: 0.55), width: 1.4),
         ),
       ),
       child: Column(

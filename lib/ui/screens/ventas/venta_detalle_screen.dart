@@ -31,9 +31,9 @@ class VentaDetalleScreen extends StatelessWidget {
     }
 
     if (venta == null) {
-      return Scaffold(
-        appBar: AppBarTaller(subtitulo: 'Documento', title: const Text('Comprobante')),
-        body: const Center(child: Text('Venta no encontrada.')),
+      return const Scaffold(
+        appBar: AppBarTaller(subtitulo: 'Documento', title: Text('Comprobante')),
+        body: Center(child: Text('Venta no encontrada.')),
       );
     }
 

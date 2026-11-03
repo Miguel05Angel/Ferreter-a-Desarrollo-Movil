@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/inputs/editable_cantidad.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -68,10 +69,10 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
     if (producto == null) {
       return Theme(
         data: _tema,
-        child: Scaffold(
+        child: const Scaffold(
           appBar: AppBarTaller(
-              mostrarCarrito: false, title: const Text('Reposicion')),
-          body: const Center(child: Text('El producto ya no existe.')),
+              mostrarCarrito: false, title: Text('Reposicion')),
+          body: Center(child: Text('El producto ya no existe.')),
         ),
       );
     }
@@ -90,10 +91,10 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
     return Theme(
       data: _tema,
       child: Scaffold(
-        appBar: AppBarTaller(
+        appBar: const AppBarTaller(
           mostrarCarrito: false,
           subtitulo: 'Compras',
-          title: const Text('Solicitud de cotizacion'),
+          title: Text('Solicitud de cotizacion'),
         ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
@@ -107,7 +108,7 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
                   shape: BeveledRectangleBorder(
                     borderRadius: const BorderRadius.only(
                         bottomRight: Radius.circular(22)),
-                    side: BorderSide(color: color.withOpacity(0.6), width: 1.6),
+                    side: BorderSide(color: color.withValues(alpha: 0.6), width: 1.6),
                   ),
                 ),
                 child: Row(
@@ -116,7 +117,7 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
                       width: 78,
                       height: 78,
                       decoration: BoxDecoration(
-                        color: categoria.color.withOpacity(0.18),
+                        color: categoria.color.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: ProductoEstatico(
@@ -246,7 +247,11 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
                               ? () => setState(() => _cantidad = cantidad - 1)
                               : null,
                         ),
-                        SizedBox(
+                        EditableCantidad(
+                          valor: cantidad,
+                          maximo: 99999,
+                          onCambio: (n) => setState(() => _cantidad = n),
+                          child: SizedBox(
                           width: 130,
                           child: Column(
                             children: [
@@ -277,7 +282,7 @@ class _ReposicionScreenState extends State<ReposicionScreen> {
                               ),
                             ],
                           ),
-                        ),
+                        )),
                         _BotonCantidad(
                           icono: Icons.add,
                           onTap: cantidad < 999

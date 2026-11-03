@@ -49,7 +49,7 @@ class PedidoPdf {
             pw.SizedBox(
               width: 80,
               child: pw.Text(etiqueta,
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                       fontSize: 9,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfColors.grey700)),
@@ -65,7 +65,7 @@ class PedidoPdf {
         color: PdfColors.grey200,
         padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: pw.Text(t,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
                 fontSize: 10,
                 fontWeight: pw.FontWeight.bold,
                 letterSpacing: 1)),
@@ -109,7 +109,7 @@ class PedidoPdf {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text(AppConstants.nombreApp,
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               fontSize: 18, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 3),
                       pw.Text('RUC ${AppConstants.rucFerreteria}',
@@ -129,11 +129,11 @@ class PedidoPdf {
                   child: pw.Column(
                     children: [
                       pw.Text('SOLICITUD DE REPOSICION',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               fontSize: 11, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 4),
                       pw.Text('Pedido No. ${d.numero}',
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                               fontSize: 12, fontWeight: pw.FontWeight.bold)),
                       pw.SizedBox(height: 2),
                       pw.Text('Fecha: ${_fecha(d.fecha)}',
@@ -197,7 +197,7 @@ class PedidoPdf {
               alignment: pw.Alignment.centerRight,
               child: pw.Text(
                 'Total estimado (referencial): ${Formatters.soles(total)}',
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+                style: const pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
               ),
             ),
             pw.SizedBox(height: 14),
@@ -216,7 +216,7 @@ class PedidoPdf {
             pw.SizedBox(height: 8),
             pw.Text(
               'Favor confirmar disponibilidad, precio final y plazo de entrega.',
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                   fontSize: 9,
                   fontStyle: pw.FontStyle.italic,
                   color: PdfColors.grey700),

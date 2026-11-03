@@ -25,7 +25,7 @@ class PlanoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final fino = Paint()
-      ..color = Paleta.linea.withOpacity(0.38)
+      ..color = Paleta.linea.withValues(alpha: 0.38)
       ..strokeWidth = 1;
     const paso = 28.0;
 
@@ -41,7 +41,7 @@ class PlanoPainter extends CustomPainter {
     }
 
     final marca = Paint()
-      ..color = Paleta.naranja.withOpacity(0.85 * progreso)
+      ..color = Paleta.naranja.withValues(alpha: 0.85 * progreso)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
@@ -181,7 +181,7 @@ class EngranajePainter extends CustomPainter {
     );
 
     // Orificios de aligeramiento
-    final hueco = Paint()..color = Paleta.grafito.withOpacity(0.85);
+    final hueco = Paint()..color = Paleta.grafito.withValues(alpha: 0.85);
     for (var i = 0; i < 6; i++) {
       final a = i * math.pi / 3 + math.pi / 6;
       final c = Offset(
@@ -196,7 +196,7 @@ class EngranajePainter extends CustomPainter {
       centro,
       radio * 0.42,
       Paint()
-        ..color = Colors.black.withOpacity(0.25)
+        ..color = Colors.black.withValues(alpha: 0.25)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );

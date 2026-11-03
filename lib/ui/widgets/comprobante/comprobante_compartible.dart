@@ -54,7 +54,7 @@ class _ComprobanteCompartibleState extends State<ComprobanteCompartible> {
   Widget build(BuildContext context) {
     final tenue = (Theme.of(context).textTheme.bodyMedium?.color ??
             Colors.grey.shade700)
-        .withOpacity(0.65);
+        .withValues(alpha: 0.65);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

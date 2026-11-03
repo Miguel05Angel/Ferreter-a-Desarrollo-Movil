@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/inputs/editable_cantidad.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -160,9 +161,9 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
     final productos = context.watch<ProductoProvider>();
     final producto = productos.buscarPorId(widget.productoId);
     if (producto == null) {
-      return Scaffold(
-        appBar: AppBarTaller(title: const Text('Pedido')),
-        body: const Center(child: Text('El producto ya no existe.')),
+      return const Scaffold(
+        appBar: AppBarTaller(title: Text('Pedido')),
+        body: Center(child: Text('El producto ya no existe.')),
       );
     }
 
@@ -186,9 +187,9 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
         : (producto.stockBajo ? const Color(0xFFE0A100) : AppTheme.success);
 
     return Scaffold(
-      appBar: AppBarTaller(
+      appBar: const AppBarTaller(
         subtitulo: 'Reposicion de stock',
-        title: const Text('Pedido a proveedor'),
+        title: Text('Pedido a proveedor'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 36),
@@ -204,7 +205,7 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
                       width: 68,
                       height: 68,
                       decoration: BoxDecoration(
-                        color: categoria.color.withOpacity(0.14),
+                        color: categoria.color.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -237,10 +238,10 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 9, vertical: 4),
                             decoration: BoxDecoration(
-                              color: colorStock.withOpacity(0.14),
+                              color: colorStock.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
                               border:
-                                  Border.all(color: colorStock.withOpacity(0.6)),
+                                  Border.all(color: colorStock.withValues(alpha: 0.6)),
                             ),
                             child: Text(
                               producto.agotado
@@ -285,7 +286,7 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 9, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppTheme.success.withOpacity(0.12),
+                            color: AppTheme.success.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -380,7 +381,11 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
                               ? () => setState(() => _cantidad = cantidad - 1)
                               : null,
                         ),
-                        SizedBox(
+                        EditableCantidad(
+                          valor: cantidad,
+                          maximo: 99999,
+                          onCambio: (n) => setState(() => _cantidad = n),
+                          child: SizedBox(
                           width: 110,
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 180),
@@ -392,7 +397,7 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
                                   fontSize: 32, fontWeight: FontWeight.w900),
                             ),
                           ),
-                        ),
+                        )),
                         _BotonRedondo(
                           icono: Icons.add,
                           onTap: cantidad < 9999

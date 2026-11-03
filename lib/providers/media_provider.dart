@@ -16,6 +16,8 @@ class MediaProvider extends ChangeNotifier {
   ProductoMedia? de(String codigo) {
     // Forzamos mayúsculas y quitamos espacios para evitar fallos de coincidencia
     final key = codigo.trim().toUpperCase(); 
+    
+    // Buscamos directamente en el JSON descargado
     final m = _mapa[key];
     return (m != null && m.tieneAlgo) ? m : null;
   }

@@ -100,7 +100,7 @@ class _BuscadorProductosState extends State<BuscadorProductos> {
               fontWeight: FontWeight.w700,
             ),
             decoration: InputDecoration(
-              hintText: 'Buscar entre ${prov.productos.length} productos...',
+              hintText: '¿Qué herramienta o material buscas hoy?',
               hintStyle: const TextStyle(
                 color: Color(0x99EDE8DF),
                 fontSize: 15,
@@ -136,7 +136,7 @@ class _BuscadorProductosState extends State<BuscadorProductos> {
                           fontFamily: 'monospace',
                           fontSize: 8,
                           letterSpacing: 0.6,
-                          color: AppTheme.hueso.withOpacity(0.35),
+                          color: AppTheme.hueso.withValues(alpha: 0.35),
                         ),
                       ),
                     )
@@ -176,10 +176,10 @@ class _BuscadorProductosState extends State<BuscadorProductos> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 11, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: c.color.withOpacity(0.12),
+                                  color: c.color.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                      color: c.color.withOpacity(0.5)),
+                                      color: c.color.withValues(alpha: 0.5)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -307,7 +307,7 @@ class _FilaResultado extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.14),
+                color: color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: ProductoImagen(producto: producto, size: 52, sombra: true),

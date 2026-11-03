@@ -38,10 +38,10 @@ class _ComprasScreenState extends State<ComprasScreen> {
         prov.solicitudes.where((s) => _filtro == null || s.estado == _filtro).toList();
 
     return Scaffold(
-      appBar: AppBarTaller(
+      appBar: const AppBarTaller(
         mostrarCarrito: false,
         subtitulo: 'Cotizaciones y ordenes',
-        title: const Text('Compras'),
+        title: Text('Compras'),
       ),
       body: Column(
         children: [
@@ -163,11 +163,11 @@ class _Tarjeta extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: ShapeDecoration(
-                    color: color.withOpacity(0.14),
+                    color: color.withValues(alpha: 0.14),
                     shape: BeveledRectangleBorder(
                       borderRadius: const BorderRadius.only(
                           bottomRight: Radius.circular(14)),
-                      side: BorderSide(color: color.withOpacity(0.5)),
+                      side: BorderSide(color: color.withValues(alpha: 0.5)),
                     ),
                   ),
                   child: Icon(icono, color: color, size: 24),
@@ -220,7 +220,7 @@ class _Tarjeta extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.14),
+                        color: color.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

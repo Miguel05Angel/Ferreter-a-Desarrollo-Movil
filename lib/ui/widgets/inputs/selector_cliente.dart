@@ -85,7 +85,7 @@ class SelectorCliente extends StatelessWidget {
               border: Border.all(
                 color: cliente == null
                     ? (oscuro ? AppTheme.bordeOscuro : AppTheme.bordeClaro)
-                    : color.withOpacity(0.7),
+                    : color.withValues(alpha: 0.7),
                 width: cliente == null ? 1.2 : 1.8,
               ),
             ),
@@ -96,11 +96,11 @@ class SelectorCliente extends StatelessWidget {
                   height: 46,
                   alignment: Alignment.center,
                   decoration: ShapeDecoration(
-                    color: color.withOpacity(0.14),
+                    color: color.withValues(alpha: 0.14),
                     shape: BeveledRectangleBorder(
                       borderRadius: const BorderRadius.only(
                           bottomRight: Radius.circular(14)),
-                      side: BorderSide(color: color.withOpacity(0.5)),
+                      side: BorderSide(color: color.withValues(alpha: 0.5)),
                     ),
                   ),
                   child: cliente == null
@@ -228,7 +228,7 @@ class _HojaClientesState extends State<_HojaClientes> {
               width: 44,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.5),
+                color: Colors.grey.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -327,7 +327,7 @@ class _Fila extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: activo ? color.withOpacity(0.12) : Theme.of(context).cardColor,
+        color: activo ? color.withValues(alpha: 0.12) : Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -337,7 +337,7 @@ class _Fila extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: activo ? color : Colors.grey.withOpacity(0.25),
+                  color: activo ? color : Colors.grey.withValues(alpha: 0.25),
                   width: activo ? 1.8 : 1),
             ),
             child: Row(
@@ -347,7 +347,7 @@ class _Fila extends StatelessWidget {
                   height: 40,
                   alignment: Alignment.center,
                   decoration: ShapeDecoration(
-                    color: color.withOpacity(0.14),
+                    color: color.withValues(alpha: 0.14),
                     shape: const BeveledRectangleBorder(
                       borderRadius:
                           BorderRadius.only(bottomRight: Radius.circular(12)),

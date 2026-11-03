@@ -121,7 +121,7 @@ class _AnilloIconoState extends State<_AnilloIcono>
               width: 92,
               height: 92,
               decoration: BoxDecoration(
-                color: widget.color.withOpacity(0.10),
+                color: widget.color.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Icon(widget.icono, size: 48, color: widget.color),
@@ -142,7 +142,7 @@ class _AnilloPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()
-      ..color = color.withOpacity(0.55)
+      ..color = color.withValues(alpha: 0.55)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;

@@ -57,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (ok) {
       Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.welcome, (route) => false);
+          AppRoutes.main, (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -71,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBarTaller(mostrarCarrito: false, subtitulo: 'Registro', title: const Text('Crear cuenta')),
+      appBar: const AppBarTaller(mostrarCarrito: false, subtitulo: 'Registro', title: Text('Crear cuenta')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(

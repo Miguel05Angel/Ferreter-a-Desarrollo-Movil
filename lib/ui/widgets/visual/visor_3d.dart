@@ -43,6 +43,12 @@ class _Visor3DState extends State<Visor3D> with SingleTickerProviderStateMixin {
 
   double _angulo = 0.6;
   double _vel = 0;
+  // Eje X (arriba/abajo): se puede girar libremente; si se suelta y no se
+  // toca, vuelve suavemente a la posicion inicial.
+  static const double _inclReposo = -0.2;
+  double _incl = _inclReposo;
+  double _velX = 0;
+  double _inactivo = 0;
   bool _arrastrando = false;
   Duration _ultimo = Duration.zero;
 
@@ -66,6 +72,18 @@ class _Visor3DState extends State<Visor3D> with SingleTickerProviderStateMixin {
       // La velocidad se acerca de forma exponencial al giro de reposo
       _vel += (_velReposo - _vel) * (1 - math.exp(-1.4 * dt));
       _angulo += _vel * dt;
+
+      // Inercia en el eje X y regreso a la inclinacion inicial
+      _incl += _velX * dt;
+      _velX *= math.exp(-2.6 * dt);
+      _inactivo += dt;
+      if (_inactivo > 2.0) {
+        var d = _incl - _inclReposo;
+        d -= (d / (2 * math.pi)).round() * 2 * math.pi;
+        _incl = _inclReposo + d * math.exp(-1.8 * dt);
+      }
+    } else {
+      _inactivo = 0;
     }
     _frame.value++;
   }
@@ -90,7 +108,7 @@ class _Visor3DState extends State<Visor3D> with SingleTickerProviderStateMixin {
       if (!frontal) {
         ilustracion = ColorFiltered(
           colorFilter: ColorFilter.mode(
-            Colors.black.withOpacity(i == 0 ? 0.40 : 0.55),
+            Colors.black.withValues(alpha: i == 0 ? 0.40 : 0.55),
             BlendMode.srcATop,
           ),
           child: ilustracion,
@@ -113,27 +131,33 @@ class _Visor3DState extends State<Visor3D> with SingleTickerProviderStateMixin {
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onHorizontalDragStart: (_) => _arrastrando = true,
-      onHorizontalDragUpdate: (d) {
+      onPanStart: (_) {
+        _arrastrando = true;
+        _velX = 0;
+      },
+      onPanUpdate: (d) {
         _angulo += d.delta.dx * 0.013;
+        _incl += d.delta.dy * 0.013;
       },
-      onHorizontalDragEnd: (d) {
+      onPanEnd: (d) {
         _arrastrando = false;
-        _vel = ((d.primaryVelocity ?? 0) * 0.013).clamp(-9.0, 9.0).toDouble();
+        final v = d.velocity.pixelsPerSecond;
+        _vel = (v.dx * 0.013).clamp(-9.0, 9.0).toDouble();
+        _velX = (v.dy * 0.013).clamp(-9.0, 9.0).toDouble();
       },
-      onHorizontalDragCancel: () => _arrastrando = false,
+      onPanCancel: () => _arrastrando = false,
       child: SizedBox(
         width: s * 1.5,
         height: s * 1.4,
         child: ValueListenableBuilder<int>(
           valueListenable: _frame,
           builder: (context, _, __) {
-            final desdeAtras = math.cos(_angulo) < 0;
+            final desdeAtras = math.cos(_angulo) * math.cos(_incl) < 0;
             final orden = desdeAtras ? _capas.reversed.toList() : _capas;
 
             final m = Matrix4.identity()
               ..setEntry(3, 2, 0.0011)
-              ..rotateX(-0.2)
+              ..rotateX(_incl)
               ..rotateY(_angulo);
 
             return Stack(
@@ -193,7 +217,7 @@ class _PlatoPainter extends CustomPainter {
       Rect.fromCenter(center: centro, width: rx * 1.5, height: ry * 1.4),
       Paint()
         ..shader = RadialGradient(
-          colors: [Colors.black.withOpacity(0.55), Colors.transparent],
+          colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent],
         ).createShader(
           Rect.fromCenter(center: centro, width: rx * 1.5, height: ry * 1.4),
         ),
@@ -203,7 +227,7 @@ class _PlatoPainter extends CustomPainter {
     canvas.drawOval(
       elipse,
       Paint()
-        ..color = Colors.white.withOpacity(0.22)
+        ..color = Colors.white.withValues(alpha: 0.22)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
@@ -220,7 +244,7 @@ class _PlatoPainter extends CustomPainter {
       final p2 = Offset(centro.dx + math.cos(a) * rx * (1 - largo),
           centro.dy + math.sin(a) * ry * (1 - largo));
       tick.color = (j % 5 == 0 ? acento : Colors.white)
-          .withOpacity(0.15 + 0.55 * ((delante + 1) / 2));
+          .withValues(alpha: 0.15 + 0.55 * ((delante + 1) / 2));
       canvas.drawLine(p1, p2, tick);
     }
   }

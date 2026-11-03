@@ -192,8 +192,8 @@ class _FilaCambio extends StatelessWidget {
         decoration: BoxDecoration(
           color: oscuro ? const Color(0xFF12161A) : const Color(0xFFF4F1EA),
           borderRadius: BorderRadius.circular(10),
-          border: Border(
-            left: BorderSide(color: AppTheme.primary, width: 4),
+          border: const Border(
+            left: const BorderSide(color: AppTheme.primary, width: 4),
           ),
         ),
         child: Column(

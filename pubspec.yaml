@@ -1,7 +1,7 @@
 name: ferreteria_app
 description: Sistema de gestion para ferreteria - productos, ventas, clientes, proveedores y cotizaciones.
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2git 
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

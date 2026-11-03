@@ -21,8 +21,8 @@ class UsuariosScreen extends StatelessWidget {
     final yo = auth.usuarioActual;
 
     return Scaffold(
-      appBar: AppBarTaller(
-          subtitulo: 'Administracion', title: const Text('Usuarios y roles')),
+      appBar: const AppBarTaller(
+          subtitulo: 'Administracion', title: Text('Usuarios y roles')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [

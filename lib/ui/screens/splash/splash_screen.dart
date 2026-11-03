@@ -85,9 +85,9 @@ class _SplashScreenState extends State<SplashScreen>
                         padding: const EdgeInsets.fromLTRB(32, 30, 32, 0),
                         child: Opacity(
                           opacity: etiqueta,
-                          child: Row(
+                          child: const Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: const [
+                            children: [
                               _Mono('FERRETERIA', Paleta.naranja),
                               _Mono('LIMA  -  PERU', Color(0x99EDE8DF)),
                             ],

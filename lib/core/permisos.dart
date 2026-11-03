@@ -40,6 +40,7 @@ class Permisos {
   bool get puedeVerProveedores => esAdmin;
   bool get puedeSolicitarReposicion => esAdmin;
   bool get puedeEliminarClientes => esAdmin;
+  bool get puedeEliminarCotizaciones => esAdmin;
   bool get puedeVerTodasLasVentas => esAdmin;
 
   /// Lista para mostrar en el perfil: (descripcion, permitido).
@@ -53,6 +54,7 @@ class Permisos {
         ('Gestionar proveedores', puedeVerProveedores),
         ('Solicitar reposicion de stock a proveedores', puedeSolicitarReposicion),
         ('Eliminar clientes', puedeEliminarClientes),
+        ('Eliminar cotizaciones', puedeEliminarCotizaciones),
         ('Ver las ventas de todos los vendedores', puedeVerTodasLasVentas),
       ];
 }

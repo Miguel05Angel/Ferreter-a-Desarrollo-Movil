@@ -19,7 +19,7 @@ class AppConstants {
   // Drive (ver docs/GUIA_IMAGENES_REALES.md). Si queda vacio la app usa las
   // ilustraciones 3D integradas.
 
-static const String idManifiestoMedia = '13tWjqtvTtnoGatlqv8Anf_FXm5iQt28B';
+static const String idManifiestoMedia = '1hpLo332qZsuYuQ2Y-lgN6iGLh8PEq9uZ';
   static const double latitudFerreteria = -12.0464;
   static const double longitudFerreteria = -77.0428;
 

@@ -100,9 +100,9 @@ class ComprobanteExportador {
         ? '${cliente.tipoDocumento}: ${cliente.documento}'
         : 'DNI: 00000000';
 
-    final tinta = PdfColors.grey900;
-    final gris = PdfColors.grey700;
-    final linea = PdfColors.grey400;
+    const tinta = PdfColors.grey900;
+    const gris = PdfColors.grey700;
+    const linea = PdfColors.grey400;
 
     pw.Widget dato(String e, String valor) => pw.Padding(
           padding: const pw.EdgeInsets.symmetric(vertical: 1.5),
@@ -112,7 +112,7 @@ class ComprobanteExportador {
               pw.SizedBox(
                 width: 58,
                 child: pw.Text(e,
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 8, fontWeight: pw.FontWeight.bold)),
               ),
               pw.Expanded(
@@ -143,10 +143,10 @@ class ComprobanteExportador {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(e,
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                       fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
               pw.Text(valor,
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                       fontSize: 9.5, fontWeight: pw.FontWeight.bold)),
             ],
           ),
@@ -167,7 +167,7 @@ class ComprobanteExportador {
             child: pw.Column(
               children: [
                 pw.Text('EL CONSTRUCTOR',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 22, fontWeight: pw.FontWeight.bold)),
                 pw.Text('FERRETERIA - MATERIALES - HERRAMIENTAS',
                     style: pw.TextStyle(fontSize: 7, color: gris)),
@@ -192,7 +192,7 @@ class ComprobanteExportador {
                 pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(vertical: 6),
                   child: pw.Text('R.U.C. ${AppConstants.rucFerreteria}',
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           fontSize: 13, fontWeight: pw.FontWeight.bold)),
                 ),
                 pw.Container(
@@ -201,7 +201,7 @@ class ComprobanteExportador {
                   padding: const pw.EdgeInsets.symmetric(vertical: 6),
                   alignment: pw.Alignment.center,
                   child: pw.Text(titulo,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           fontSize: 10.5,
                           color: PdfColors.white,
                           fontWeight: pw.FontWeight.bold)),
@@ -209,7 +209,7 @@ class ComprobanteExportador {
                 pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(vertical: 6),
                   child: pw.Text(v.numero,
-                      style: pw.TextStyle(
+                      style: const pw.TextStyle(
                           fontSize: 16, fontWeight: pw.FontWeight.bold)),
                 ),
               ],
@@ -277,10 +277,10 @@ class ComprobanteExportador {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
                 pw.Text('TOTAL',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 13, fontWeight: pw.FontWeight.bold)),
                 pw.Text(_soles(v.total),
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 17, fontWeight: pw.FontWeight.bold)),
               ],
             ),
@@ -292,7 +292,7 @@ class ComprobanteExportador {
           ],
           pw.SizedBox(height: 7),
           pw.Text('SON: ${montoEnLetras(v.total)}',
-              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
+              style: const pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 14),
 
           // ------------------------------------------ QR y barras
@@ -316,7 +316,7 @@ class ComprobanteExportador {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text('HASH',
-                        style: pw.TextStyle(
+                        style: const pw.TextStyle(
                             fontSize: 7.5, fontWeight: pw.FontWeight.bold)),
                     pw.Text(hashVisual(v.id),
                         style: pw.TextStyle(fontSize: 7, color: gris)),
@@ -347,7 +347,7 @@ class ComprobanteExportador {
           pw.SizedBox(height: 10),
           pw.Center(
             child: pw.Text('Gracias por su preferencia',
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                     fontSize: 12,
                     fontStyle: pw.FontStyle.italic,
                     fontWeight: pw.FontWeight.bold)),

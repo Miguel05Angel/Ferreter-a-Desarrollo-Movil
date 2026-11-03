@@ -20,6 +20,7 @@ import '../../widgets/visual/decor_industrial.dart';
 import '../../widgets/visual/producto_illustration.dart';
 import '../../widgets/media/escenario_producto.dart';
 import '../../../providers/media_provider.dart';
+import '../../widgets/visual/escala_grises.dart';
 import '../../widgets/visual/tilt_3d.dart';
 import '../main/main_shell_screen.dart';
 import 'producto_form_screen.dart';
@@ -96,9 +97,9 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen>
     if (producto == null) {
       return Theme(
         data: _tema,
-        child: Scaffold(
-          appBar: AppBarTaller(title: const Text('Producto')),
-          body: const Center(child: Text('El producto ya no existe.')),
+        child: const Scaffold(
+          appBar: AppBarTaller(title: Text('Producto')),
+          body: Center(child: Text('El producto ya no existe.')),
         ),
       );
     }
@@ -134,6 +135,10 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen>
         backgroundColor: AppTheme.grafito,
         body: Stack(
           children: [
+            EscalaGrises(
+              activo: producto.agotado,
+              child: Stack(
+                children: [
             // ---------------------------------------------- escenario
             Positioned.fill(
               child: DecoratedBox(
@@ -174,7 +179,7 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen>
                             height: 1,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -4,
-                            color: Colors.white.withOpacity(0.045),
+                            color: Colors.white.withValues(alpha: 0.045),
                           ),
                         ),
                       ),
@@ -332,6 +337,17 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen>
                 ],
               ),
             ),
+                ],
+              ),
+            ),
+            // Triangulo de advertencia animado sobre la imagen (producto agotado)
+            if (producto.agotado)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 70 + altoVisor * 0.28,
+                left: 0,
+                right: 0,
+                child: const Center(child: TrianguloAdvertencia(size: 66)),
+              ),
           ],
         ),
       ),
@@ -375,9 +391,9 @@ class _Info extends StatelessWidget {
   Widget _chip(String texto, Color color) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.14),
+          color: color.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Text(
           texto.toUpperCase(),
@@ -481,7 +497,7 @@ class _Info extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Color(e.value).withOpacity(0.55),
+                            color: Color(e.value).withValues(alpha: 0.55),
                             blurRadius: 8,
                           ),
                         ],
@@ -498,7 +514,34 @@ class _Info extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: 22),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Icon(
+              producto.precioVerificado
+                  ? Icons.verified_outlined
+                  : Icons.help_outline,
+              size: 16,
+              color: producto.precioVerificado
+                  ? const Color(0xFF66BB6A)
+                  : const Color(0x99EDE8DF),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                producto.precioVerificado
+                    ? 'Precio verificado en ${producto.fuente} el '
+                        '${producto.fechaPrecio!.day.toString().padLeft(2, '0')}/'
+                        '${producto.fechaPrecio!.month.toString().padLeft(2, '0')}/'
+                        '${producto.fechaPrecio!.year}'
+                    : 'Precio sin verificar (referencial)',
+                style: const TextStyle(
+                    fontSize: 11.5, color: Color(0xB3EDE8DF)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -758,9 +801,9 @@ class _TarjetaDisponibilidad extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: colorChip.withOpacity(0.12),
+                  color: colorChip.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: colorChip.withOpacity(0.6)),
+                  border: Border.all(color: colorChip.withValues(alpha: 0.6)),
                 ),
                 child: Text(
                   estado,
@@ -814,7 +857,7 @@ class _TarjetaDisponibilidad extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.12),
+                    color: AppTheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(7),
                   ),
                   child: Row(
@@ -858,7 +901,7 @@ class _TarjetaDisponibilidad extends StatelessWidget {
                         Container(color: const Color(0xFF2E353B)),
                         Container(
                           width: c.maxWidth * hasta.clamp(0.0, 1.0),
-                          color: _plomo.withOpacity(0.55),
+                          color: _plomo.withValues(alpha: 0.55),
                         ),
                         Container(
                           width: c.maxWidth * dispo.clamp(0.0, 1.0),
@@ -1066,7 +1109,7 @@ class _TarjetaRecomendada extends StatelessWidget {
                 Container(
                   height: 94,
                   width: double.infinity,
-                  color: color.withOpacity(0.16),
+                  color: color.withValues(alpha: 0.16),
                   child: Stack(
                     children: [
                       Positioned(
@@ -1169,7 +1212,7 @@ class _BarraAgregar extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.danger.withOpacity(0.14),
+          color: AppTheme.danger.withValues(alpha: 0.14),
           borderRadius: BorderRadius.circular(10),
         ),
         child: const Text(

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/routes/app_routes.dart';
 import '../../../providers/carrito_provider.dart';
+import '../../../providers/producto_provider.dart';
+import '../productos/producto_detalle_screen.dart';
 import '../carrito/carrito_page.dart';
 import '../home/inicio_page.dart';
 import '../perfil/perfil_page.dart';
@@ -60,11 +63,50 @@ class _MainShellScreenState extends State<MainShellScreen>
     );
     ShellNavegacion.indice.value = 0;
     ShellNavegacion.indice.addListener(_alCambiarExterno);
+    _alertas = context.read<ProductoProvider>().alertas;
+    _alertas.addListener(_alertaStock);
+  }
+
+  late final ValueNotifier<List<AlertaStock>> _alertas;
+
+  /// Alerta urgente: una venta dejo productos en stock critico o agotados.
+  void _alertaStock() {
+    final lista = _alertas.value;
+    if (lista.isEmpty || !mounted) return;
+    final a = lista.first;
+    final mas = lista.length > 1 ? ' (+${lista.length - 1} mas)' : '';
+    final texto = a.agotado
+        ? 'AGOTADO: ${a.producto.nombre}$mas'
+        : 'STOCK CRITICO: ${a.producto.nombre}, quedan ${a.producto.stock}$mas';
+    final mensajes = ScaffoldMessenger.of(context);
+    mensajes.hideCurrentSnackBar();
+    mensajes.showSnackBar(SnackBar(
+      backgroundColor: a.agotado ? AppTheme.danger : const Color(0xFFE65100),
+      duration: const Duration(seconds: 8),
+      content: Row(
+        children: [
+          const Icon(Icons.warning_rounded, color: Colors.white),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text('ALERTA URGENTE DE REPOSICION\n$texto',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+      action: SnackBarAction(
+        label: 'VER',
+        textColor: Colors.white,
+        onPressed: () => AppRoutes.push(
+            context, ProductoDetalleScreen(productoId: a.producto.id)),
+      ),
+    ));
   }
 
   @override
   void dispose() {
     ShellNavegacion.indice.removeListener(_alCambiarExterno);
+    _alertas.removeListener(_alertaStock);
     _transicion.dispose();
     super.dispose();
   }
@@ -214,7 +256,7 @@ class _BotonNav extends StatelessWidget {
     final color = activo ? AppTheme.primary : const Color(0xFF8A9199);
     return InkWell(
       onTap: onTap,
-      splashColor: AppTheme.primary.withOpacity(0.15),
+      splashColor: AppTheme.primary.withValues(alpha: 0.15),
       highlightColor: Colors.transparent,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

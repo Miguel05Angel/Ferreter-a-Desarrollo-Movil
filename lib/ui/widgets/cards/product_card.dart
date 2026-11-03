@@ -58,8 +58,8 @@ class ProductCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          categoria.color.withOpacity(0.10),
-                          categoria.color.withOpacity(0.22),
+                          categoria.color.withValues(alpha: 0.10),
+                          categoria.color.withValues(alpha: 0.22),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -99,7 +99,7 @@ class ProductCard extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: stockColor.withOpacity(0.12),
+                        color: stockColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

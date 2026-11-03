@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.welcome, (route) => false);
+          AppRoutes.main, (route) => false);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -136,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Theme.of(context)
                               .colorScheme
                               .primary
-                              .withOpacity(0.06),
+                              .withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(

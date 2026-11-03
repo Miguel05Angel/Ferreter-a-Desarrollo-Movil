@@ -50,8 +50,8 @@ class CompraExportador {
 
   // ------------------------------------------------------ piezas del PDF
 
-  static final PdfColor _tinta = PdfColors.grey900;
-  static final PdfColor _gris = PdfColors.grey700;
+  static const PdfColor _tinta = PdfColors.grey900;
+  static const PdfColor _gris = PdfColors.grey700;
 
   static pw.Widget _cabecera(String titulo, String numero, String fechaTxt) =>
       pw.Row(
@@ -63,7 +63,7 @@ class CompraExportador {
             children: [
               pw.Text('EL CONSTRUCTOR',
                   style:
-                      pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                      const pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
               pw.Text('FERRETERIA - MATERIALES - HERRAMIENTAS',
                   style: pw.TextStyle(fontSize: 7.5, color: _gris)),
               pw.SizedBox(height: 4),
@@ -84,11 +84,11 @@ class CompraExportador {
             child: pw.Column(
               children: [
                 pw.Text(titulo,
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 10.5, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 4),
                 pw.Text(numero,
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                         fontSize: 15, fontWeight: pw.FontWeight.bold)),
                 pw.Text(fechaTxt,
                     style: pw.TextStyle(fontSize: 8.5, color: _gris)),
@@ -103,7 +103,7 @@ class CompraExportador {
         color: _tinta,
         padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         child: pw.Text(t,
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
                 fontSize: 9,
                 color: PdfColors.white,
                 fontWeight: pw.FontWeight.bold)),
@@ -117,7 +117,7 @@ class CompraExportador {
             pw.SizedBox(
               width: 92,
               child: pw.Text(e,
-                  style: pw.TextStyle(
+                  style: const pw.TextStyle(
                       fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
             ),
             pw.Expanded(
@@ -199,10 +199,10 @@ class CompraExportador {
               3: const pw.FixedColumnWidth(72),
               if (conRef) 4: const pw.FixedColumnWidth(96),
             },
-            border: pw.TableBorder(
+            border: const pw.TableBorder(
               horizontalInside:
-                  pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+                  const pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+              bottom: const pw.BorderSide(color: PdfColors.grey400, width: 0.5),
             ),
             children: [
               pw.TableRow(
@@ -267,7 +267,7 @@ class CompraExportador {
             ),
             child: pw.Text(
               'Responder antes del ${fecha(s.respuestaAntes)} al telefono ${AppConstants.telefonoFerreteria}.',
-              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+              style: const pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
             ),
           ),
           pw.SizedBox(height: 18),
@@ -342,10 +342,10 @@ class CompraExportador {
               3: const pw.FixedColumnWidth(66),
               4: const pw.FixedColumnWidth(76),
             },
-            border: pw.TableBorder(
+            border: const pw.TableBorder(
               horizontalInside:
-                  pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+                  const pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+              bottom: const pw.BorderSide(color: PdfColors.grey400, width: 0.5),
             ),
             children: [
               pw.TableRow(

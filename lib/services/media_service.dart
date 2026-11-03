@@ -11,23 +11,31 @@ import '../data/models/producto_media.dart';
 class MediaService {
   MediaService._();
 
-  static String urlImagen(String id, {int ancho = 900}) =>
-      'https://lh3.googleusercontent.com/d/$id';
+  // Maneja URLs completas (ImgBB, Imgur, etc.) o IDs de Google Drive
+  static String urlImagen(String id, {int ancho = 900}) {
+    if (id.startsWith('http')) {
+      return id;
+    }
+    return 'https://drive.google.com/thumbnail?id=$id&sz=w$ancho';
+  }
 
   static String urlDescarga(String id) =>
       'https://drive.usercontent.google.com/download?id=$id&export=download&confirm=t';
 
+  // El parámetro 't=' con la fecha actual obliga a Android a descargar el JSON nuevo, ignorando la caché vieja.
   static Uri get urlManifiesto => Uri.parse(
-      'https://drive.usercontent.google.com/download?id=${AppConstants.idManifiestoMedia}&export=download&confirm=t');
+      'https://drive.usercontent.google.com/download?id=${AppConstants.idManifiestoMedia}&export=download&confirm=t&t=${DateTime.now().millisecondsSinceEpoch}');
       
   static Future<Map<String, ProductoMedia>> cargarManifiesto() async {
     if (AppConstants.idManifiestoMedia.isEmpty) return {};
     try {
-      // 🔥 AGREGAMOS EL USER-AGENT AQUÍ PARA ENGAÑAR A GOOGLE DRIVE
       final r = await http.get(
         urlManifiesto,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'Cache-Control': 'no-cache, no-store, must-revalidate', // Evita la caché
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       ).timeout(const Duration(seconds: 15));
       

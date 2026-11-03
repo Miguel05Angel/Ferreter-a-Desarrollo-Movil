@@ -67,7 +67,7 @@ class _PerfilPageState extends State<PerfilPage> {
     final tema = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: AppBarTaller(subtitulo: 'Cuenta', title: const Text('Mi perfil')),
+      appBar: const AppBarTaller(subtitulo: 'Cuenta', title: Text('Mi perfil')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

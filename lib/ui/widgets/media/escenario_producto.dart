@@ -139,7 +139,7 @@ class _EscenarioProductoState extends State<EscenarioProducto> {
                       decoration: BoxDecoration(
                         color: actual == m.$1
                             ? AppTheme.primary
-                            : AppTheme.grafito.withOpacity(0.7),
+                            : AppTheme.grafito.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: actual == m.$1

@@ -40,6 +40,13 @@ class Mapeadores {
         tipoVisual: _s(m['tipoVisual'], 'generico'),
         colorHex: _i(m['colorHex'], 0xFF607D8B),
         coloresHex: _listaInt(m['coloresHex']),
+        stockMinimo: _i(m['stockMinimo'], 5),
+        fuente: _s(m['fuente']),
+        urlFuente: _s(m['urlFuente']),
+        fechaPrecio: m['fechaPrecio'] is Timestamp
+            ? (m['fechaPrecio'] as Timestamp).toDate()
+            : null,
+        calidad: _d(m['calidad']),
       );
 
   static Mapa productoAMapa(Producto p) => {
@@ -55,6 +62,12 @@ class Mapeadores {
         'tipoVisual': p.tipoVisual,
         'colorHex': p.colorHex,
         'coloresHex': p.coloresHex,
+        'stockMinimo': p.stockMinimo,
+        'fuente': p.fuente,
+        'urlFuente': p.urlFuente,
+        'fechaPrecio':
+            p.fechaPrecio == null ? null : Timestamp.fromDate(p.fechaPrecio!),
+        'calidad': p.calidad,
       };
 
   // ---------------- Cliente ----------------
@@ -86,6 +99,7 @@ class Mapeadores {
         ruc: _s(m['ruc']),
         telefono: _s(m['telefono']),
         direccion: _s(m['direccion']),
+        referencia: _s(m['referencia']),
         productos: _listaStr(m['productos']),
         latitud: m['latitud'] is num ? (m['latitud'] as num).toDouble() : null,
         longitud:
@@ -97,6 +111,7 @@ class Mapeadores {
         'ruc': p.ruc,
         'telefono': p.telefono,
         'direccion': p.direccion,
+        'referencia': p.referencia,
         'productos': p.productos,
         'latitud': p.latitud,
         'longitud': p.longitud,
@@ -164,6 +179,9 @@ class Mapeadores {
         validezDias: _i(m['validezDias'], 7),
         estado: _s(m['estado'], 'Pendiente'),
         fecha: _f(m['fecha']),
+        clienteId: _s(m['clienteId']),
+        tipoDocumento: _s(m['tipoDocumento']),
+        documento: _s(m['documento']),
       );
 
   static Mapa cotizacionAMapa(Cotizacion c) => {
@@ -175,5 +193,8 @@ class Mapeadores {
         'validezDias': c.validezDias,
         'estado': c.estado,
         'fecha': Timestamp.fromDate(c.fecha),
+        'clienteId': c.clienteId,
+        'tipoDocumento': c.tipoDocumento,
+        'documento': c.documento,
       };
 }

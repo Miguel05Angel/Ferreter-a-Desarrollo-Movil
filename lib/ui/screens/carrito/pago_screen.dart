@@ -13,6 +13,8 @@ import '../../../core/utils/formatters.dart';
 import '../../../data/models/cliente.dart';
 import '../../../data/models/venta.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/cotizacion_provider.dart';
+import '../../../services/cotizacion_pdf.dart';
 import '../../../providers/carrito_provider.dart';
 import '../../../providers/producto_provider.dart';
 import '../../../providers/venta_provider.dart';
@@ -50,6 +52,7 @@ class _PagoScreenState extends State<PagoScreen> {
   int _fase = 0; // 0 elegir, 1 procesando, 2 listo
   String _mensaje = '';
   Venta? _venta;
+  String? _cotizacionPagada; // numero de la cotizacion saldada (si hubo)
 
   static const _metodos = <_Metodo>[
     _Metodo('Efectivo', Icons.payments_outlined, 'EN CAJA', Color(0xFF43A047)),
@@ -72,6 +75,39 @@ class _PagoScreenState extends State<PagoScreen> {
   @override
   void dispose() {
     super.dispose();
+  }
+
+  /// Cancela el pago de cotizacion y regresa al carrito.
+  /// Si hay productos agregados fuera de la cotizacion, se descarta el pago.
+  Future<void> _abandonarPago() async {
+    final carrito = context.read<CarritoProvider>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ABANDONAR PAGO DE COTIZACION'),
+        content: const Text(
+          'Si abandonas, los productos agregados a este pago se daran de baja. '
+          'La cotizacion quedara sin pagar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('NO, SEGUIR PAGANDO'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('SI, ABANDONAR'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || ok != true) return;
+    carrito.limpiar();
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _pagar() async {
@@ -100,6 +136,16 @@ class _PagoScreenState extends State<PagoScreen> {
               .map((i) => (productoId: i.producto.id, cantidad: i.cantidad))
               .toList(),
         );
+    // Si el carrito venia de una cotizacion, queda saldada (PAGADA).
+    final cotId = carrito.cotizacionId;
+    if (cotId != null) {
+      final cotizaciones = context.read<CotizacionProvider>();
+      final c = cotizaciones.buscarPorId(cotId);
+      if (c != null) {
+        cotizaciones.cambiarEstado(cotId, 'Pagada');
+        _cotizacionPagada = CotizacionPdf.numero(c);
+      }
+    }
     carrito.limpiar();
 
     setState(() {
@@ -142,6 +188,7 @@ class _PagoScreenState extends State<PagoScreen> {
               _ => _Exito(
                   key: const ValueKey('e'),
                   venta: _venta!,
+                  cotizacion: _cotizacionPagada,
                   cliente: widget.cliente,
                   vendedor: usuario?.nombre.split(' ').first ?? 'Caja 01',
                   onNuevaVenta: () => _irA(1),
@@ -225,6 +272,43 @@ class _PagoScreenState extends State<PagoScreen> {
         ),
 
         const SizedBox(height: 26),
+
+        // ---------------------------------- acciones adicionales (solo en pago de cotizacion)
+        if (context.read<CarritoProvider>().enModoCotizacion) ...[
+          const _Mono('ACCIONES DE COTIZACION', AppTheme.hueso, grande: true),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('AGREGAR PRODUCTOS A MI COTIZACION'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: BorderSide(color: AppTheme.primary, width: 1.4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _abandonarPago,
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('ABANDONAR PAGO'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.danger,
+                    side: BorderSide(color: AppTheme.danger, width: 1.4),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+        ],
+
         const _Mono('¿CON QUE QUIERES PAGAR?', AppTheme.hueso, grande: true),
         const SizedBox(height: 12),
 
@@ -359,7 +443,7 @@ class _TileMetodo extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: ShapeDecoration(
             color: activo
-                ? metodo.color.withOpacity(0.16)
+                ? metodo.color.withValues(alpha: 0.16)
                 : AppTheme.superficieOscura,
             shape: BeveledRectangleBorder(
               borderRadius:
@@ -548,7 +632,7 @@ class _PanelQrState extends State<_PanelQr>
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
                               BoxShadow(
-                                  color: widget.color.withOpacity(0.8),
+                                  color: widget.color.withValues(alpha: 0.8),
                                   blurRadius: 12,
                                   spreadRadius: 1),
                             ],
@@ -564,9 +648,9 @@ class _PanelQrState extends State<_PanelQr>
           const SizedBox(height: 16),
           const _Mono('ESCANEA EL QR DESDE TU APP', Color(0x99EDE8DF)),
           const SizedBox(height: 6),
-          Text(
+          const Text(
             'o envia al ${AppConstants.celularYapePlin}',
-            style: const TextStyle(
+            style: TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.hueso),
@@ -577,7 +661,7 @@ class _PanelQrState extends State<_PanelQr>
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              color: widget.color.withOpacity(0.14),
+              color: widget.color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -851,7 +935,7 @@ class _TarjetaVisual extends StatelessWidget {
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                    color: const Color(0xFFFFB300).withOpacity(0.9),
+                    color: const Color(0xFFFFB300).withValues(alpha: 0.9),
                     shape: BoxShape.circle),
               ),
             ),
@@ -1083,10 +1167,10 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               decoration: BoxDecoration(
-                color: AppTheme.amarilloSenal.withOpacity(0.10),
+                color: AppTheme.amarilloSenal.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                    color: AppTheme.amarilloSenal.withOpacity(0.5)),
+                    color: AppTheme.amarilloSenal.withValues(alpha: 0.5)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1099,13 +1183,13 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
                       Text(
                         'Total exacto',
                         style: TextStyle(
-                            color: AppTheme.hueso.withOpacity(0.7),
+                            color: AppTheme.hueso.withValues(alpha: 0.7),
                             fontSize: 13),
                       ),
                       Text(
                         Formatters.soles(widget.totalExacto),
                         style: TextStyle(
-                          color: AppTheme.hueso.withOpacity(0.7),
+                          color: AppTheme.hueso.withValues(alpha: 0.7),
                           fontSize: 13,
                           decoration: TextDecoration.lineThrough,
                         ),
@@ -1140,7 +1224,7 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
                     style: TextStyle(
                       fontSize: 11,
                       height: 1.4,
-                      color: AppTheme.hueso.withOpacity(0.55),
+                      color: AppTheme.hueso.withValues(alpha: 0.55),
                     ),
                   ),
                 ],
@@ -1181,7 +1265,7 @@ class _PanelEfectivoState extends State<_PanelEfectivo> {
               color: (vacio
                       ? Colors.white
                       : (_alcanza ? const Color(0xFF43A047) : AppTheme.danger))
-                  .withOpacity(0.14),
+                  .withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Column(
@@ -1324,11 +1408,13 @@ class _Exito extends StatefulWidget {
   final Venta venta;
   final Cliente? cliente;
   final String vendedor;
+  final String? cotizacion; // numero de cotizacion pagada (null en compras normales)
   final VoidCallback onNuevaVenta;
   final VoidCallback onHistorial;
 
   const _Exito({
     super.key,
+    this.cotizacion,
     required this.venta,
     required this.cliente,
     required this.vendedor,
@@ -1416,10 +1502,12 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
             const SizedBox(height: 20),
             FadeSlide(
               delay: const Duration(milliseconds: 300),
-              child: const Text(
-                'MUCHAS GRACIAS\nPOR SU COMPRA',
+              child: Text(
+                widget.cotizacion != null
+                    ? 'COTIZACIÓN\nPAGADA'
+                    : 'MUCHAS GRACIAS\nPOR SU COMPRA',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 28,
                   height: 1.05,
                   fontWeight: FontWeight.w900,
@@ -1431,10 +1519,13 @@ class _ExitoState extends State<_Exito> with SingleTickerProviderStateMixin {
             const SizedBox(height: 10),
             FadeSlide(
               delay: const Duration(milliseconds: 450),
-              child: const Text(
-                'Aqui esta su comprobante.\nQue tenga un buen dia.',
+              child: Text(
+                widget.cotizacion != null
+                    ? 'La cotización ${widget.cotizacion} fue saldada en su '
+                        'totalidad.\nAquí está su comprobante de pago.'
+                    : 'Aqui esta su comprobante.\nQue tenga un buen dia.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                     fontSize: 15, height: 1.45, color: Color(0xCCEDE8DF)),
               ),
             ),
@@ -1525,7 +1616,7 @@ class _ConfetiPainter extends CustomPainter {
       canvas.rotate(u * 9 + p.giro);
       canvas.drawRect(
         Rect.fromCenter(center: Offset.zero, width: p.ancho, height: p.ancho * 0.45),
-        Paint()..color = p.color.withOpacity(1 - u * 0.6),
+        Paint()..color = p.color.withValues(alpha: 1 - u * 0.6),
       );
       canvas.restore();
     }
@@ -1554,7 +1645,7 @@ class _Caja extends StatelessWidget {
         shape: BeveledRectangleBorder(
           borderRadius:
               const BorderRadius.only(bottomRight: Radius.circular(24)),
-          side: BorderSide(color: color.withOpacity(0.7), width: 1.6),
+          side: BorderSide(color: color.withValues(alpha: 0.7), width: 1.6),
         ),
       ),
       child: child,

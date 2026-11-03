@@ -57,16 +57,47 @@ class ProductoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Alertas urgentes de reposicion: se emiten cuando una venta deja un
+  /// producto en STOCK CRITICO (antes de agotarse) o AGOTADO.
+  final ValueNotifier<List<AlertaStock>> alertas = ValueNotifier(const []);
+
+  List<Producto> get criticos => _productos.where((p) => p.critico).toList();
+  List<Producto> get agotados => _productos.where((p) => p.agotado).toList();
+
+  @override
+  void dispose() {
+    alertas.dispose();
+    super.dispose();
+  }
+
   /// Descuenta el stock despues de registrar una venta.
   void descontarStock(List<({String productoId, int cantidad})> items) {
+    final nuevas = <AlertaStock>[];
     for (final item in items) {
       final index = _productos.indexWhere((p) => p.id == item.productoId);
       if (index >= 0) {
         final actual = _productos[index];
         final nuevoStock = actual.stock - item.cantidad;
-        _productos[index] = actual.copyWith(stock: nuevoStock < 0 ? 0 : nuevoStock);
+        final despues =
+            actual.copyWith(stock: nuevoStock < 0 ? 0 : nuevoStock);
+        _productos[index] = despues;
+        // Alerta solo cuando cruza el limite (no en cada venta).
+        final cruzoMinimo = !actual.stockBajo && despues.stockBajo;
+        final seAgoto = !actual.agotado && despues.agotado;
+        if (cruzoMinimo || seAgoto) {
+          nuevas.add(AlertaStock(despues));
+        }
       }
     }
     notifyListeners();
+    if (nuevas.isNotEmpty) alertas.value = nuevas;
   }
+}
+
+
+/// Aviso de reposicion: [producto.agotado] indica si ya no quedan unidades.
+class AlertaStock {
+  final Producto producto;
+  const AlertaStock(this.producto);
+  bool get agotado => producto.agotado;
 }

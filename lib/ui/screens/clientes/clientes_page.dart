@@ -62,9 +62,9 @@ class _ClientesPageState extends State<ClientesPage> {
     final empresas = todos.where((c) => c.tipoDocumento == 'RUC').length;
 
     return Scaffold(
-      appBar: AppBarTaller(
+      appBar: const AppBarTaller(
         subtitulo: 'Directorio',
-        title: const Text('Clientes'),
+        title: Text('Clientes'),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AppRoutes.push(context, const ClienteFormScreen()),
@@ -238,7 +238,7 @@ class _ChipFiltro extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: activo
                       ? AppTheme.primary
-                      : Colors.grey.withOpacity(0.18),
+                      : Colors.grey.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -309,11 +309,11 @@ class _FichaCliente extends StatelessWidget {
                       height: 54,
                       alignment: Alignment.center,
                       decoration: ShapeDecoration(
-                        color: color.withOpacity(0.14),
+                        color: color.withValues(alpha: 0.14),
                         shape: BeveledRectangleBorder(
                           borderRadius: const BorderRadius.only(
                               bottomRight: Radius.circular(16)),
-                          side: BorderSide(color: color.withOpacity(0.5)),
+                          side: BorderSide(color: color.withValues(alpha: 0.5)),
                         ),
                       ),
                       child: Text(
@@ -351,7 +351,7 @@ class _FichaCliente extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.14),
+                                color: color.withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(

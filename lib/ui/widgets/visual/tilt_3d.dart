@@ -101,8 +101,8 @@ class _Tilt3DState extends State<Tilt3D> with SingleTickerProviderStateMixin {
                           center: Alignment(_inclinacion.dx, _inclinacion.dy),
                           radius: 0.9,
                           colors: [
-                            Colors.white.withOpacity(0.18 * intensidad),
-                            Colors.white.withOpacity(0),
+                            Colors.white.withValues(alpha: 0.18 * intensidad),
+                            Colors.white.withValues(alpha: 0),
                           ],
                         ),
                       ),

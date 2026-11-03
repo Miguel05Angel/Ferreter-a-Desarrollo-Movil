@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../core/utils/formatos.dart';
 
 import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/routes/app_routes.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/proveedor.dart';
 import '../../../providers/proveedor_provider.dart';
 import '../../widgets/buttons/animated_button.dart';
 import '../../widgets/feedback/edicion_flow.dart';
 import '../../widgets/inputs/custom_text_field.dart';
+import 'selector_ubicacion_screen.dart';
 
 class ProveedorFormScreen extends StatefulWidget {
   final Proveedor? proveedor;
@@ -27,7 +31,8 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
   late final TextEditingController _telefono;
   late final TextEditingController _direccion;
   late final TextEditingController _productos;
-  late final TextEditingController _coordenadas;
+  late final TextEditingController _referencia;
+  LatLng? _ubicacion;
   bool _cargando = false;
 
   bool get _esEdicion => widget.proveedor != null;
@@ -41,18 +46,17 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
     _telefono = TextEditingController(text: p?.telefono ?? '');
     _direccion = TextEditingController(text: p?.direccion ?? '');
     _productos = TextEditingController(text: p?.productos.join(', ') ?? '');
-    _coordenadas = TextEditingController(
-      text: (p?.latitud != null && p?.longitud != null)
-          ? '${p!.latitud}, ${p.longitud}'
-          : '',
-    );
+    _referencia = TextEditingController(text: p?.referencia ?? '');
+    if (p?.latitud != null && p?.longitud != null) {
+      _ubicacion = LatLng(p!.latitud!, p.longitud!);
+    }
     for (final x in [
       _nombre,
       _ruc,
       _telefono,
       _direccion,
+      _referencia,
       _productos,
-      _coordenadas
     ]) {
       x.addListener(_alCambiar);
     }
@@ -67,20 +71,24 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
     _telefono.dispose();
     _direccion.dispose();
     _productos.dispose();
-    _coordenadas.dispose();
+    _referencia.dispose();
     super.dispose();
   }
 
-  /// Convierte "lat, lng" en [lat, lng]; devuelve null si el formato no es valido.
-  List<double>? _parseCoordenadas(String t) {
-    final partes = t.split(',');
-    if (partes.length != 2) return null;
-    final lat = double.tryParse(partes[0].trim());
-    final lng = double.tryParse(partes[1].trim());
-    if (lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) {
-      return null;
-    }
-    return [lat, lng];
+  String _txtUbicacion(double? lat, double? lng) => (lat != null && lng != null)
+      ? '${lat.toStringAsFixed(6)}, ${lng.toStringAsFixed(6)}'
+      : '';
+
+  Future<void> _anadirUbicacion() async {
+    final r = await AppRoutes.push<LatLng>(
+      context,
+      SelectorUbicacionScreen(
+        inicial: _ubicacion,
+        direccion: _direccion.text.trim(),
+        nombre: _nombre.text.trim().isEmpty ? 'Proveedor' : _nombre.text.trim(),
+      ),
+    );
+    if (r != null && mounted) setState(() => _ubicacion = r);
   }
 
   List<CambioCampo> _cambios() {
@@ -91,12 +99,9 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
     k.texto('RUC', p.ruc, _ruc.text);
     k.texto('Telefono', p.telefono, _telefono.text);
     k.texto('Direccion', p.direccion, _direccion.text);
-    k.texto(
-        'Coordenadas',
-        (p.latitud != null && p.longitud != null)
-            ? '${p.latitud}, ${p.longitud}'
-            : '',
-        _coordenadas.text);
+    k.texto('Referencia', p.referencia, _referencia.text);
+    k.texto('Ubicacion exacta', _txtUbicacion(p.latitud, p.longitud),
+        _txtUbicacion(_ubicacion?.latitude, _ubicacion?.longitude));
     String norm(String v) => v
         .split(',')
         .map((e) => e.trim())
@@ -141,8 +146,6 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
         .where((e) => e.isNotEmpty)
         .toList();
 
-    final coords = _parseCoordenadas(_coordenadas.text);
-
     final proveedor = Proveedor(
       id: widget.proveedor?.id ??
           'pr-${DateTime.now().millisecondsSinceEpoch}',
@@ -150,9 +153,10 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
       ruc: ruc,
       telefono: _telefono.text.trim(),
       direccion: _direccion.text.trim(),
+      referencia: _referencia.text.trim(),
       productos: listaProductos,
-      latitud: coords?[0],
-      longitud: coords?[1],
+      latitud: _ubicacion?.latitude,
+      longitud: _ubicacion?.longitude,
     );
 
     if (_esEdicion) {
@@ -225,17 +229,18 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
               ),
               const SizedBox(height: 18),
               CustomTextField(
-                etiqueta: 'Ubicacion exacta (opcional)',
-                icono: Icons.pin_drop_outlined,
-                controlador: _coordenadas,
-                formateadores: Formatos.texto(40),
-                ayuda:
-                    'En Google Maps manten pulsado el lugar y copia: -12.0464, -77.0428',
-                validador: (v) => (v == null ||
-                        v.trim().isEmpty ||
-                        _parseCoordenadas(v) != null)
-                    ? null
-                    : 'Formato: -12.0464, -77.0428',
+                etiqueta: 'Referencia (opcional)',
+                icono: Icons.flag_outlined,
+                controlador: _referencia,
+                formateadores: Formatos.texto(100),
+                ayuda: 'Ej: a la espalda del parque, porton azul',
+                capitalizacion: TextCapitalization.sentences,
+              ),
+              const SizedBox(height: 18),
+              _BotonUbicacion(
+                ubicacion: _ubicacion,
+                onTap: _anadirUbicacion,
+                onQuitar: () => setState(() => _ubicacion = null),
               ),
               const SizedBox(height: 18),
               CustomTextField(
@@ -259,6 +264,73 @@ class _ProveedorFormScreenState extends State<ProveedorFormScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+/// Boton "Anadir ubicacion exacta": abre el mapa dentro de la app.
+class _BotonUbicacion extends StatelessWidget {
+  final LatLng? ubicacion;
+  final VoidCallback onTap;
+  final VoidCallback onQuitar;
+
+  const _BotonUbicacion({
+    required this.ubicacion,
+    required this.onTap,
+    required this.onQuitar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hay = ubicacion != null;
+    final oscuro = Theme.of(context).brightness == Brightness.dark;
+    final color = hay ? AppTheme.success : AppTheme.primary;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(hay ? Icons.edit_location_alt_outlined : Icons.add_location_alt_outlined),
+            label: Text(hay ? 'CAMBIAR UBICACION EXACTA' : 'ANADIR UBICACION EXACTA'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              side: BorderSide(color: color, width: 1.8),
+              foregroundColor:
+                  hay ? color : (oscuro ? AppTheme.primary : const Color(0xFFD95800)),
+            ),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          child: hay
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          size: 18, color: AppTheme.success),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Ubicacion fijada: ${ubicacion!.latitude.toStringAsFixed(5)}, ${ubicacion!.longitude.toStringAsFixed(5)}',
+                          style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 11.5,
+                              color: Colors.grey.shade600),
+                        ),
+                      ),
+                      TextButton(
+                          onPressed: onQuitar, child: const Text('Quitar')),
+                    ],
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ],
     );
   }
 }
