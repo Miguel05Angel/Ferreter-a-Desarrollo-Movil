@@ -24,5 +24,5 @@ Descomprime este zip SOBRE tu proyecto (mismas carpetas) y acepta reemplazar.
    ya muestra los productos y dice "08 REFERENCIAS".
 
 ## 4. Firebase
-Los datos nuevos (2 proveedores nuevos) se cargan solos al abrir la app
-(version de datos 3). No se pisan tus cambios.
+Consulta la [guía de Firebase de la práctica 11](docs/GUIA_11_FIREBASE.md)
+para configurar el acceso con DNI, el catálogo y las ventas.

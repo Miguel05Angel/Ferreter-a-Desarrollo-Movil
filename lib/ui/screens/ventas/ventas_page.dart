@@ -259,7 +259,9 @@ class _VentasPageState extends State<VentasPage> {
 
     return Scaffold(
       appBar: const AppBarTaller(subtitulo: 'Caja', title: Text('Ventas')),
-      body: propias.isEmpty
+      body: provider.error
+          ? const Center(child: Text('No se pudo cargar el historial de Firestore.'))
+          : propias.isEmpty
           ? const EmptyState(
               icono: Icons.receipt_long_outlined,
               titulo: 'Sin ventas registradas',

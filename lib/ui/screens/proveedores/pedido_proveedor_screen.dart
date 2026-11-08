@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/inputs/editable_cantidad.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/permisos.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/contacto_service.dart';
 import '../../../core/utils/dinero.dart';
@@ -139,23 +140,28 @@ class _PedidoProveedorScreenState extends State<PedidoProveedorScreen> {
     controlador.dispose();
     if (unidades == null || unidades <= 0 || !mounted) return;
 
-    context
-        .read<ProductoProvider>()
-        .actualizar(producto.copyWith(stock: producto.stock + unidades));
+    try {
+      await context.read<ProductoProvider>().reponer(producto.id, unidades);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo registrar el ingreso de stock.')),
+      );
+      return;
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF2E7D32),
-        content: Text('Ingreso registrado: +$unidades ${producto.unidad}. '
-            'Nuevo stock: ${producto.stock + unidades}'),
+        content: Text('Ingreso registrado: +$unidades ${producto.unidad}.'),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    if (!auth.permisos.gestionaProveedores) {
-      return const AccesoRestringido(modulo: 'Pedidos a proveedores');
+    if (!Permisos.de(context).puedeVerProveedores) {
+      return const AccesoRestringido(titulo: 'Pedidos a proveedores');
     }
 
     final productos = context.watch<ProductoProvider>();

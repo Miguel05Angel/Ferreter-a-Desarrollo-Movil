@@ -5,30 +5,13 @@ import 'models/cliente.dart';
 import 'models/cotizacion.dart';
 import 'models/producto.dart';
 import 'models/proveedor.dart';
-import 'models/usuario.dart';
+
 import 'models/venta.dart';
 
 /// Datos de ejemplo basados en el levantamiento de informacion
 /// realizado en la ferreteria.
 class MockData {
   MockData._();
-
-  static const Usuario usuarioDemo = Usuario(
-    id: 'u-1',
-    nombre: 'Carlos Huaman',
-    email: 'admin@ferreteria.com',
-    telefono: '987654321',
-    password: 'admin123',
-  );
-
-  static const Usuario vendedorDemo = Usuario(
-    id: 'u-2',
-    nombre: 'Lucia Quispe',
-    email: 'vendedor@ferreteria.com',
-    telefono: '965432178',
-    password: 'vendedor1',
-    rol: 'Vendedor',
-  );
 
   static final List<Categoria> categorias = [
     const Categoria(

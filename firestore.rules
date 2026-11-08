@@ -1,11 +1,42 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // SOLO PARA DESARROLLO / PROYECTO DE CLASE:
-    // permite leer y escribir a cualquiera. Antes de publicar la app
-    // hay que cerrar esto con Firebase Authentication.
-    match /{document=**} {
-      allow read, write: if true;
+    function usuario() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function personal() {
+      return request.auth != null
+        && usuario().rol in ['Administrador', 'Vendedor']
+        && request.auth.token.email == usuario().dni + '@acceso.ferreteria.invalid';
+    }
+
+    function administrador() {
+      return personal() && usuario().rol == 'Administrador';
+    }
+
+    match /usuarios/{uid} {
+      allow get: if personal() && (request.auth.uid == uid || administrador());
+      allow list: if administrador();
+      allow update: if personal() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 3
+        && request.resource.data.nombre.size() <= 50;
+    }
+
+    match /productos/{id} {
+      allow read: if personal();
+      allow write: if administrador();
+    }
+
+    match /ventas/{id} {
+      allow read: if administrador()
+        || (personal() && resource.data.vendedorId == request.auth.uid);
+    }
+
+    match /_meta/catalogo {
+      allow read, write: if administrador();
     }
   }
 }

@@ -1,201 +1,40 @@
-import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 
 import '../data/firestore_mappers.dart';
 import '../data/mock_data.dart';
+import '../data/models/producto.dart';
+import 'firebase_ferreteria.dart';
 
-/// Unico punto de acceso a Firestore (base de datos "ferreteria-db").
 class FirestoreService {
   FirestoreService._();
-  static final FirestoreService instance = FirestoreService._();
+  static final instance = FirestoreService._();
 
-  static const String databaseId = 'ferreteria-db';
+  final db = FirebaseFerreteria.db;
 
-  /// Sube este numero cuando MockData tenga datos nuevos que deban llegar
-  /// a la base (por ejemplo, mas productos). Solo se agregan los que faltan.
-  static const int versionDatos = 3;
+  CollectionReference<Mapa> get productos => db.collection('productos');
+  CollectionReference<Mapa> get ventas => db.collection('ventas');
 
-  // Colecciones
-  static const String colProductos = 'productos';
-  static const String colClientes = 'clientes';
-  static const String colProveedores = 'proveedores';
-  static const String colVentas = 'ventas';
-  static const String colCotizaciones = 'cotizaciones';
+  Future<void> prepararCatalogo() async {
+    final marca = db.collection('_meta').doc('catalogo');
+    if ((await marca.get(const GetOptions(source: Source.server))).exists)
+      return;
 
-  final FirebaseFirestore db = FirebaseFirestore.instanceFor(
-    app: Firebase.app(),
-    databaseId: databaseId,
-  );
+    // Respeta un catálogo ya cargado en esta base.
+    final actual =
+        await productos.limit(1).get(const GetOptions(source: Source.server));
 
-  // ------------------------------------------------------------------
-  // LECTURA EN TIEMPO REAL
-  // ------------------------------------------------------------------
-  Stream<List<T>> escuchar<T>(
-    String coleccion,
-    T Function(String id, Mapa datos) desde,
-  ) {
-    return db
-        .collection(coleccion)
-        .snapshots()
-        // Un resultado vacio que viene de la memoria local no significa que la
-        // base este vacia: se ignora para no dejar la app sin datos.
-        .where((snap) => !(snap.metadata.isFromCache && snap.docs.isEmpty))
-        .map((snap) {
-      debugPrint('📡 Firestore [$coleccion]: ${snap.docs.length} documentos '
-          '${snap.metadata.isFromCache ? "(caché local)" : "(servidor)"}');
-      final docs = snap.docs.toList()
-        ..sort((a, b) => _creado(a.data()).compareTo(_creado(b.data())));
-      return docs.map((d) => desde(d.id, d.data())).toList();
-    });
-  }
-
-  static int _creado(Mapa data) {
-    final v = data['creadoEn'];
-    return v is Timestamp ? v.millisecondsSinceEpoch : 0;
-  }
-
-  // ------------------------------------------------------------------
-  // ESCRITURA
-  // ------------------------------------------------------------------
-  Future<void> crear(String coleccion, String id, Mapa datos) => _ejecutar(
-        'crear $coleccion/$id',
-        () => db
-            .collection(coleccion)
-            .doc(id)
-            .set({...datos, 'creadoEn': Timestamp.now()}),
-      );
-
-  Future<void> guardar(String coleccion, String id, Mapa datos) => _ejecutar(
-        'guardar $coleccion/$id',
-        () => db
-            .collection(coleccion)
-            .doc(id)
-            .set(datos, SetOptions(merge: true)),
-      );
-
-  Future<void> eliminar(String coleccion, String id) => _ejecutar(
-        'eliminar $coleccion/$id',
-        () => db.collection(coleccion).doc(id).delete(),
-      );
-
-  Future<void> _ejecutar(String que, Future<void> Function() accion) async {
-    try {
-      await accion();
-      debugPrint('✅ Firestore: $que (confirmado por el servidor)');
-    } on FirebaseException catch (e) {
-      debugPrint('❌ Firestore: $que → (${e.code}) ${e.message}');
-      debugPrint(_pista(e.code));
-    } catch (e) {
-      debugPrint('❌ Firestore: $que → $e');
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // VERIFICACION DE CONEXION + CARGA INICIAL
-  // ------------------------------------------------------------------
-  /// Comprueba que el servidor responde y, SOLO la primera vez,
-  /// sube los datos de ejemplo (MockData) a la base.
-  Future<void> inicializarBaseDeDatos() async {
-    try {
-      final meta = db.collection('_meta').doc('seed');
-      final snap = await meta
-          .get(const GetOptions(source: Source.server))
-          .timeout(const Duration(seconds: 10));
-      debugPrint('✅ Firestore CONECTADO a la base "$databaseId" '
-          '(el servidor respondió)');
-      final version = (snap.data()?['version'] as num?)?.toInt() ??
-          (snap.exists ? 1 : 0);
-      if (version >= versionDatos) {
-        debugPrint('ℹ️ Datos iniciales al dia (version $version).');
-        return;
+    await db.runTransaction((transaccion) async {
+      if ((await transaccion.get(marca)).exists) return;
+      final iniciales = actual.docs.isEmpty
+          ? MockData.productos.indexed
+          : <(int, Producto)>[];
+      for (final (posicion, producto) in iniciales) {
+        transaccion.set(productos.doc(producto.id), {
+          ...Mapeadores.productoAMapa(producto),
+          'creadoEn': Timestamp.fromMillisecondsSinceEpoch(posicion),
+        });
       }
-      await _sembrar(meta, soloFaltantes: snap.exists);
-    } on TimeoutException {
-      debugPrint('❌ Firestore: sin respuesta en 10 s. Revisa tu internet '
-          'o que la base "$databaseId" exista.');
-    } on FirebaseException catch (e) {
-      debugPrint('❌ Firestore (${e.code}): ${e.message}');
-      debugPrint(_pista(e.code));
-    } catch (e) {
-      debugPrint('❌ Firestore: $e');
-    }
-  }
-
-  Future<Set<String>> _idsExistentes(String coleccion) async {
-    final snap = await db
-        .collection(coleccion)
-        .get(const GetOptions(source: Source.server));
-    return snap.docs.map((d) => d.id).toSet();
-  }
-
-  Future<void> _sembrar(DocumentReference<Mapa> meta,
-      {bool soloFaltantes = false}) async {
-    final batch = db.batch();
-    final base = DateTime.now();
-    var n = 0;
-    final existentes = <String, Set<String>>{};
-    if (soloFaltantes) {
-      for (final c in [
-        colProductos,
-        colClientes,
-        colProveedores,
-        colVentas,
-        colCotizaciones,
-      ]) {
-        existentes[c] = await _idsExistentes(c);
-      }
-    }
-
-    void poner(String coleccion, String id, Mapa datos) {
-      // En una actualizacion no se pisan los datos que el usuario ya tiene.
-      if (existentes[coleccion]?.contains(id) ?? false) return;
-      batch.set(db.collection(coleccion).doc(id), {
-        ...datos,
-        // Orden estable: respeta el orden de MockData.
-        'creadoEn': Timestamp.fromDate(base.add(Duration(milliseconds: n++))),
-      });
-    }
-
-    for (final p in MockData.productos) {
-      poner(colProductos, p.id, Mapeadores.productoAMapa(p));
-    }
-    for (final c in MockData.clientes) {
-      poner(colClientes, c.id, Mapeadores.clienteAMapa(c));
-    }
-    for (final p in MockData.proveedores) {
-      poner(colProveedores, p.id, Mapeadores.proveedorAMapa(p));
-    }
-    for (final v in MockData.ventas) {
-      poner(colVentas, v.id, Mapeadores.ventaAMapa(v));
-    }
-    for (final c in MockData.cotizaciones) {
-      poner(colCotizaciones, c.id, Mapeadores.cotizacionAMapa(c));
-    }
-    batch.set(meta, {
-      'cargadoEn': Timestamp.now(),
-      'documentos': n,
-      'version': versionDatos,
+      transaccion.set(marca, {'creadoEn': FieldValue.serverTimestamp()});
     });
-
-    await batch.commit();
-    debugPrint('🌱 Firestore: datos iniciales cargados ($n documentos).');
-  }
-
-  static String _pista(String code) {
-    switch (code) {
-      case 'permission-denied':
-        return '👉 Revisa las REGLAS de la base "$databaseId" en Firebase '
-            'Console (pestaña Reglas). Copia las de firestore.rules.';
-      case 'not-found':
-        return '👉 La base "$databaseId" no existe en este proyecto. '
-            'Revisa el nombre en Firebase Console → Firestore.';
-      case 'unavailable':
-        return '👉 Sin conexión a internet o Firestore no disponible.';
-      default:
-        return '👉 Código de error: $code';
-    }
   }
 }

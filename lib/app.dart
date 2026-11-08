@@ -27,11 +27,17 @@ class FerreteriaApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ProductoProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ProductoProvider>(
+          create: (_) => ProductoProvider(),
+          update: (_, auth, productos) => productos!..actualizarSesion(auth.usuarioActual),
+        ),
         ChangeNotifierProvider(create: (_) => ClienteProvider()),
         ChangeNotifierProvider(create: (_) => ProveedorProvider()),
         ChangeNotifierProvider(create: (_) => CarritoProvider()),
-        ChangeNotifierProvider(create: (_) => VentaProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, VentaProvider>(
+          create: (_) => VentaProvider(),
+          update: (_, auth, ventas) => ventas!..actualizarSesion(auth.usuarioActual),
+        ),
         ChangeNotifierProvider(create: (_) => CotizacionProvider()),
         ChangeNotifierProvider(create: (_) => CotizacionBorradorProvider()),
         ChangeNotifierProvider(create: (_) => MediaProvider()..cargar()),

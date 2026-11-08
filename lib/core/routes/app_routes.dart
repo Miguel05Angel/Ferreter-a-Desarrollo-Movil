@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../ui/screens/auth/login_screen.dart';
-import '../../ui/screens/auth/register_screen.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
 import '../../ui/screens/main/main_shell_screen.dart';
 import '../../ui/screens/splash/splash_screen.dart';
 import '../../ui/screens/welcome/welcome_screen.dart';
@@ -31,7 +33,7 @@ class AppRoutes {
   static const String splash = '/';
   static const String welcome = '/welcome';
   static const String login = '/login';
-  static const String register = '/register';
+
   static const String main = '/main';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -42,10 +44,14 @@ class AppRoutes {
         return FadeRoute(builder: (_) => const WelcomeScreen());
       case login:
         return FadeRoute(builder: (_) => const LoginScreen());
-      case register:
-        return FadeRoute(builder: (_) => const RegisterScreen());
+
       case main:
-        return FadeRoute(builder: (_) => const MainShellScreen());
+        return FadeRoute(builder: (context) {
+          final sesion = context.watch<AuthProvider>();
+          return sesion.autenticado
+              ? const MainShellScreen()
+              : const LoginScreen();
+        });
       default:
         return FadeRoute(builder: (_) => const SplashScreen());
     }

@@ -12,7 +12,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/validators.dart';
 import '../../../data/models/producto.dart';
 import '../../../providers/producto_provider.dart';
-import '../../widgets/buttons/animated_button.dart';
+
 import '../../widgets/feedback/edicion_flow.dart';
 import '../../widgets/inputs/custom_text_field.dart';
 
@@ -208,14 +208,22 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
             fechaPrecio: base.fechaPrecio,
           );
 
-    if (_esEdicion) {
-      provider.actualizar(nuevo);
-    } else {
-      provider.agregar(nuevo);
+    try {
+      if (_esEdicion) {
+        await provider.actualizar(nuevo, stockOriginal: widget.producto!.stock);
+      } else {
+        await provider.agregar(nuevo);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _cargando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar el producto.')),
+      );
+      return;
     }
-
-    setState(() => _cargando = false);
     if (!mounted) return;
+    setState(() => _cargando = false);
 
     await EdicionFlow.exito(
       context,

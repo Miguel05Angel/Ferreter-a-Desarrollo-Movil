@@ -6,7 +6,7 @@ validaciones completas en formularios.
 
 ## Modulos
 
-- Autenticacion: inicio de sesion y registro con validaciones.
+- Autenticación: acceso con DNI y contraseña, con alta de vendedores desde el perfil del administrador.
 - Productos: catalogo con busqueda, filtro por categoria, CRUD completo
   y alertas de stock bajo/agotado.
 - Carrito y ventas: registro de venta con IGV (18%), metodos de pago
@@ -45,9 +45,7 @@ lib/
 3. Ejecutar: `flutter pub get`
 4. Conectar un emulador o dispositivo y ejecutar: `flutter run`
 
-## Credenciales de prueba
+## Configuración de Firebase
 
-- Correo: admin@ferreteria.com
-- Contrasena: admin123
-
-Tambien se puede registrar un usuario nuevo desde la pantalla de registro.
+La [guía de la práctica 11](docs/GUIA_11_FIREBASE.md) explica cómo crear el
+primer administrador, probar el flujo local y activar el proyecto compartido.

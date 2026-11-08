@@ -180,7 +180,11 @@ class _ProductosPageState extends State<ProductosPage> {
               label: const Text('NUEVO'),
             )
           : null,
-      body: Column(
+      body: provider.error
+          ? const Center(child: Text('No se pudo cargar el catálogo de Firestore.'))
+          : provider.cargando
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),

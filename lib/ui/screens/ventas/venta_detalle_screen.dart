@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/cliente.dart';
 import '../../../data/models/venta.dart';
-import '../../../providers/auth_provider.dart';
+
 import '../../../providers/cliente_provider.dart';
 import '../../../providers/venta_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
@@ -20,7 +20,6 @@ class VentaDetalleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final ventas = context.watch<VentaProvider>();
     final clientes = context.watch<ClienteProvider>();
-    final usuario = context.watch<AuthProvider>().usuarioActual;
 
     Venta? venta;
     for (final v in ventas.ventas) {
@@ -32,7 +31,8 @@ class VentaDetalleScreen extends StatelessWidget {
 
     if (venta == null) {
       return const Scaffold(
-        appBar: AppBarTaller(subtitulo: 'Documento', title: Text('Comprobante')),
+        appBar:
+            AppBarTaller(subtitulo: 'Documento', title: Text('Comprobante')),
         body: Center(child: Text('Venta no encontrada.')),
       );
     }
@@ -50,12 +50,14 @@ class VentaDetalleScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         children: [
+          Text('Estado de la venta: ${venta.estado}'),
+          const SizedBox(height: 12),
           FadeSlide(
             inicio: const Offset(0, 0.25),
             child: ComprobanteConAcciones(
               venta: venta,
               cliente: cliente,
-              vendedor: usuario?.nombre.split(' ').first ?? 'Caja 01',
+              vendedor: venta.vendedor.isEmpty ? 'Caja 01' : venta.vendedor,
             ),
           ),
         ],
