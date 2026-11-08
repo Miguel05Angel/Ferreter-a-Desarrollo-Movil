@@ -250,10 +250,14 @@ En el navegador arranca el panel; en el teléfono, la app de siempre.
 
 ### 3.2 Qué hace el panel
 
+Primero pide **login con DNI y contraseña**, el mismo del teléfono, y solo
+deja pasar a cuentas con rol **Administrador**. Después:
+
 - **Resumen**: total de productos, cuántos están en stock bajo o agotados,
-  valor del inventario, y la lista de los que necesitan reposición.
+  valor del inventario, total vendido, y la lista de los que necesitan
+  reposición.
 - **Productos**: tabla en vivo con crear, editar y eliminar sobre Firestore.
-- **Clientes**: listado de solo lectura.
+- **Ventas**: listado de solo lectura.
 
 Lee y escribe con el `FirestoreService` y los `Mapeadores` **que ya tenía el
 proyecto**, usando el modelo `Producto` real (código, marca, unidad, precio de
@@ -393,5 +397,82 @@ después **se separan**: lo que el panel escriba en Firestore no aparece en el
 teléfono hasta que los providers lean de ahí.
 
 Conectar los providers a Firestore es el paso siguiente y es un cambio de otro
-tamaño: hay que pasar cada provider a escuchar `FirestoreService.escuchar(...)`
-y mover las escrituras a `guardar`/`eliminar`. No entraba en esta guía.
+tamaño. No entraba en esta guía.
+
+---
+
+## 6. Integración con el PR #2 (acceso con DNI)
+
+Mientras esto se desarrollaba, `mirkoraymundo18` abrió el **PR #2** desde
+`codex/acceso-dni-ferreteria`: 38 archivos, login con DNI, Cloud Functions y
+reglas de Firestore cerradas. Toca cosas que esta guía también toca, así que
+se integró en la rama `integracion/guia-13-sobre-pr2`.
+
+Dato curioso: **los dos arreglamos por separado** el `version: 1.0.0+2git` y
+la falta de dependencias de Firebase. Llegamos al mismo diagnóstico sin
+saberlo.
+
+### El conflicto que git no marca
+
+Git reportaba 3 conflictos (`main.dart`, `app_routes.dart`, `firebase.json`).
+El peligroso era un cuarto que **no** marcaba: el `pubspec.yaml`.
+
+Como las líneas estaban en sitios distintos, git metió las dos versiones:
+
+```yaml
+  firebase_core: ^3.15.2      # del PR
+  cloud_firestore: ^5.6.12    # del PR
+  ...
+  firebase_core: ^5.1.0       # de esta guía
+  cloud_firestore: ^7.1.0     # de esta guía
+```
+
+Eso es YAML inválido — claves duplicadas — y `flutter pub get` lo rechaza.
+Pasado por un parser: `duplicated mapping key (22:3)`.
+
+**Lección para el equipo**: que git diga "sin conflicto" no significa que el
+resultado funcione. En archivos de dependencias hay que revisar a mano.
+
+La versión unificada mantiene una sola familia. En FlutterFire las versiones
+van emparejadas, no se pueden mezclar generaciones:
+
+```
+firebase_core 5.1.0 · firebase_auth 7.0.1 · cloud_firestore 7.1.0 · cloud_functions 7.0.1
+```
+
+### Lo que hubo que rehacer
+
+El PR recorta `FirestoreService` de 201 líneas a 40: desaparecen `escuchar()`,
+`crear()`, `guardar()`, `eliminar()`, las constantes de colección y
+`inicializarBaseDeDatos()`. Quedan `productos`, `ventas` y
+`prepararCatalogo()`. El panel web usaba todo lo eliminado, así que se
+reescribió contra la API nueva.
+
+Además, las reglas nuevas niegan todo sin sesión. Consecuencias:
+
+| Antes | Ahora |
+|---|---|
+| Panel anónimo | Pide login y exige rol Administrador |
+| Sección Clientes | Sección Ventas |
+| `inicializarBaseDeDatos()` al arrancar | `prepararCatalogo()` tras el login |
+
+Lo de Clientes no es capricho: `firestore.rules` solo cubre `usuarios`,
+`productos`, `ventas` y `_meta/catalogo`. Las colecciones `clientes`,
+`proveedores` y `cotizaciones` **no tienen regla, así que se niegan por
+defecto**. Si algún día la app las lee desde Firestore, habrá que añadirlas.
+
+### Un arreglo en el código del PR
+
+`FirebaseFerreteria.inicializar()` llamaba a `Firebase.initializeApp()` **sin
+opciones**. En Android funciona porque lee `google-services.json`, pero en web
+ese archivo no existe y falla. Se cambió para que pase
+`DefaultFirebaseOptions.currentPlatform`, que cubre ambas.
+
+Es el único cambio sobre código del PR; conviene comentárselo a su autor.
+
+### Orden recomendado
+
+1. Que entre el PR #2 a `main`.
+2. Rebasar esta rama sobre el `main` nuevo (las decisiones de arriba ya están
+   tomadas; sería mecánico).
+3. `flutter pub get` y `flutter analyze` antes de abrir el PR.
