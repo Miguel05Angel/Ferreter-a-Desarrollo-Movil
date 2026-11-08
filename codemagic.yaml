@@ -1,0 +1,112 @@
+# Compilacion de iOS en la nube, sin necesidad de tener una Mac.
+#
+# ANTES de que esto funcione hace falta, una sola vez:
+#   1. Crear la carpeta ios/ en el proyecto:  flutter create --platforms=ios .
+#   2. Registrar la app iOS en Firebase Console y guardar el
+#      GoogleService-Info.plist (ver docs/GUIA_13.md).
+#   3. En Codemagic > Teams > Integrations, conectar App Store Connect con una
+#      API key .p8 (Issuer ID + Key ID).
+#   4. En Codemagic > App settings > Environment variables, crear el grupo
+#      "firebase_ios" con la variable FIREBASE_PLIST, marcada como "Secure",
+#      con el GoogleService-Info.plist codificado en base64:
+#         macOS/Linux:  base64 -i GoogleService-Info.plist | pbcopy
+#         Windows:      certutil -encode GoogleService-Info.plist tmp.b64
+
+workflows:
+  ios-build:
+    name: iOS - El Constructor
+    # Un primer build con CocoaPods desde cero pasa de 30 minutos.
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        # Debe coincidir con el Bundle ID registrado en Apple Developer y en
+        # Firebase. Para publicar de verdad hay que cambiar com.example por un
+        # dominio propio (ver docs/GUIA_13.md).
+        bundle_identifier: com.example.ferreteria_app
+      groups:
+        - firebase_ios
+
+    scripts:
+      - name: Dependencias de Flutter
+        script: flutter pub get
+
+      - name: Restaurar GoogleService-Info.plist
+        script: |
+          if [ -n "$FIREBASE_PLIST" ]; then
+            echo "$FIREBASE_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist restaurado desde la variable segura"
+          elif [ -f ios/Runner/GoogleService-Info.plist ]; then
+            echo "Se usa el GoogleService-Info.plist del repositorio"
+          else
+            echo "FALTA GoogleService-Info.plist: Firebase no arrancara en iOS"
+            exit 1
+          fi
+
+      - name: CocoaPods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+
+      - name: Analisis estatico
+        script: flutter analyze
+        # El analisis no deberia tumbar la compilacion del release.
+        ignore_failure: true
+
+      - name: Compilar el IPA
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/logs/*
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        # Usa la integracion de App Store Connect configurada en la UI.
+        auth: integration
+        # Sube a TestFlight para instalarlo en iPhones reales.
+        submit_to_testflight: true
+      email:
+        recipients:
+          # Pongan aqui los correos del equipo que deben recibir el aviso.
+          - correo-del-equipo@ejemplo.com
+        notify:
+          success: true
+          failure: true
+
+  # Compila y publica el panel web en Firebase Hosting.
+  web-build:
+    name: Web - Panel administrativo
+    max_build_duration: 30
+    instance_type: linux_x2
+
+    environment:
+      flutter: stable
+      groups:
+        - firebase_hosting   # variable FIREBASE_TOKEN (firebase login:ci)
+
+    scripts:
+      - name: Dependencias de Flutter
+        script: flutter pub get
+
+      - name: Compilar web
+        script: flutter build web --release
+
+      - name: Publicar en Firebase Hosting
+        script: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "Falta FIREBASE_TOKEN: se omite la publicacion"
+            exit 0
+          fi
+          npm install -g firebase-tools
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN"
+
+    artifacts:
+      - build/web/**

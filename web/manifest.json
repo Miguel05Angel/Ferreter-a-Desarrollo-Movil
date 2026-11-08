@@ -1,0 +1,11 @@
+{
+    "name": "El Constructor - Panel administrativo",
+    "short_name": "El Constructor",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#1b1b1f",
+    "theme_color": "#1b1b1f",
+    "description": "Panel administrativo de la Ferreteria El Constructor",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false
+}
