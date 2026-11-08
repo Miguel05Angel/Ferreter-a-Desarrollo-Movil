@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
+import '../firebase_options.dart';
+
 class FirebaseFerreteria {
   FirebaseFerreteria._();
 
@@ -19,7 +21,12 @@ class FirebaseFerreteria {
   static Future<void> inicializar() async {
     const host = String.fromEnvironment('FIREBASE_EMULADOR');
     if (kReleaseMode || host.isEmpty) {
-      _app = await Firebase.initializeApp();
+      // Con opciones explicitas: en Android bastaria con google-services.json,
+      // pero en web ese archivo no existe e initializeApp() sin opciones
+      // falla. DefaultFirebaseOptions cubre ambas plataformas.
+      _app = await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       return;
     }
 

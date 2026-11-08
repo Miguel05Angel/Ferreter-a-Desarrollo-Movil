@@ -229,6 +229,16 @@ class _PerfilPageState extends State<PerfilPage> {
                   subtitle: Text(usuario?.telefono ?? 'No registrado'),
                 ),
                 const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.straighten),
+                  title: const Text('Sensores y nivel'),
+                  subtitle:
+                      const Text('Acelerometro, giroscopio y magnetometro'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () =>
+                      Navigator.of(context).pushNamed(AppRoutes.sensores),
+                ),
+                const Divider(height: 1),
                 const ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('Acerca de'),
