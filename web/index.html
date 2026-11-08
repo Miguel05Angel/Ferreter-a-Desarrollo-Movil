@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    Flutter reemplaza $FLUTTER_BASE_HREF al compilar. Si algun dia publicas el
+    panel en un subdirectorio, compila con:
+        flutter build web --base-href /panel/
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Panel administrativo de la Ferreteria El Constructor">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- iOS meta tags e icono -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="El Constructor">
+
+  <title>El Constructor - Panel administrativo</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Pantalla de carga: evita el flash en blanco mientras baja el motor. */
+    body {
+      margin: 0;
+      background-color: #1b1b1f;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    #cargando {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e6e1e5;
+      font-size: 15px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div id="cargando">Cargando panel...</div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
