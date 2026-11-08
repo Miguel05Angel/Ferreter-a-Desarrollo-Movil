@@ -1,17 +1,25 @@
 class Usuario {
   final String id;
+  final String dni;
   final String nombre;
-  final String email;
   final String telefono;
-  final String password;
   final String rol;
 
   const Usuario({
     required this.id,
+    required this.dni,
     required this.nombre,
-    required this.email,
     required this.telefono,
-    required this.password,
-    this.rol = 'Administrador',
+    required this.rol,
   });
+
+  factory Usuario.desdeFirestore(String id, Map<String, dynamic> datos) {
+    return Usuario(
+      id: id,
+      dni: datos['dni'] as String? ?? '',
+      nombre: datos['nombre'] as String? ?? '',
+      telefono: datos['telefono'] as String? ?? '',
+      rol: datos['rol'] as String? ?? '',
+    );
+  }
 }

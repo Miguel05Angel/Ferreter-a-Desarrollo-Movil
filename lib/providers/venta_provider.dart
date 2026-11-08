@@ -1,25 +1,57 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:flutter/material.dart';
 
 import '../core/utils/dinero.dart';
-
 import '../core/constants/app_constants.dart';
-import '../data/mock_data.dart';
+import '../data/firestore_mappers.dart';
+import '../data/models/usuario.dart';
 import '../data/models/venta.dart';
+import '../services/firebase_ferreteria.dart';
+import '../services/firestore_service.dart';
 
 class VentaProvider extends ChangeNotifier {
-  final List<Venta> _ventas = List.of(MockData.ventas);
+  final _servicio = FirestoreService.instance;
+  List<Venta> _ventas = [];
+  StreamSubscription<QuerySnapshot<Mapa>>? _suscripcion;
+  String? _uid;
+  bool error = false;
 
-  List<Venta> get ventas =>
-      List.unmodifiable(_ventas..sort((a, b) => b.fecha.compareTo(a.fecha)));
+  List<Venta> get ventas => List.unmodifiable(_ventas);
 
-  /// Ventas que puede ver el usuario: el administrador ve todas, el
-  /// vendedor solo las que registro el.
-  List<Venta> visiblesPara({required bool esAdmin, required String usuarioId}) {
-    final todas = ventas;
-    return esAdmin
-        ? todas
-        : todas.where((v) => v.vendedorId == usuarioId).toList();
+  void actualizarSesion(Usuario? usuario) {
+    if (_uid == usuario?.id) return;
+    _uid = usuario?.id;
+    _suscripcion?.cancel();
+    _ventas = [];
+    error = false;
+    if (usuario == null) return;
+
+    final Query<Mapa> consulta = usuario.rol == 'Administrador'
+        ? _servicio.ventas
+        : _servicio.ventas.where('vendedorId', isEqualTo: usuario.id);
+    _suscripcion =
+        consulta.snapshots(includeMetadataChanges: true).listen((resultado) {
+      if (resultado.metadata.isFromCache) return;
+      _ventas = resultado.docs
+          .map((doc) => Mapeadores.ventaDesde(doc.id, doc.data()))
+          .toList()
+        ..sort((a, b) => b.fecha.compareTo(a.fecha));
+      error = false;
+      notifyListeners();
+    }, onError: (Object _) {
+      error = true;
+      notifyListeners();
+    });
   }
+
+  List<Venta> visiblesPara(
+          {required bool esAdmin, required String usuarioId}) =>
+      esAdmin
+          ? ventas
+          : ventas.where((v) => v.vendedorId == usuarioId).toList();
 
   static double totalHoyEn(List<Venta> lista) {
     final hoy = DateTime.now();
@@ -32,58 +64,49 @@ class VentaProvider extends ChangeNotifier {
   }
 
   int get totalVentas => _ventas.length;
-
-  double get totalHoy {
-    final hoy = DateTime.now();
-    return _ventas
-        .where((v) =>
-            v.fecha.year == hoy.year &&
-            v.fecha.month == hoy.month &&
-            v.fecha.day == hoy.day)
-        .fold(0.0, (suma, v) => suma + v.total);
-  }
+  double get totalHoy => totalHoyEn(_ventas);
 
   static double calcularIgv(double subtotal) =>
       Dinero.r2(subtotal * AppConstants.igv);
 
-  String siguienteNumero(String comprobante) {
-    final prefijo = comprobante == 'Factura' ? 'F' : 'B';
-    final correlativo =
-        _ventas.where((v) => v.comprobante == comprobante).length + 1;
-    return '${prefijo}001-${correlativo.toString().padLeft(4, '0')}';
-  }
+  String nuevoIdVenta() => _servicio.ventas.doc().id;
 
-  Venta registrar({
+  Future<({Venta venta, List<Mapa> cambios})> registrar({
+    required String id,
     required String clienteNombre,
     required List<ItemVenta> items,
     required String metodoPago,
     required String comprobante,
-    String vendedorId = '',
-    String vendedor = '',
-    double redondeo = 0,
-  }) {
-    final subtotal =
-        Dinero.r2(items.fold(0.0, (suma, i) => suma + i.subtotal));
-    final igv = calcularIgv(subtotal);
+  }) async {
+    final resultado = await FirebaseFerreteria.funciones
+        .httpsCallable('registrarVenta')
+        .call({
+      'id': id,
+      'clienteNombre': clienteNombre,
+      'items': [
+        for (final item in items)
+          {
+            'productoId': item.productoId,
+            'cantidad': item.cantidad,
+            'precioUnitario': item.precioUnitario,
+          },
+      ],
+      'metodoPago': metodoPago,
+      'comprobante': comprobante,
+    });
+    final datos = Mapa.from(resultado.data as Map);
+    final venta = Mapa.from(datos['venta'] as Map);
+    venta['fecha'] =
+        Timestamp.fromMillisecondsSinceEpoch(venta['fecha'] as int);
+    final cambios = (datos['cambios'] as List)
+        .map((cambio) => Mapa.from(cambio as Map))
+        .toList();
+    return (venta: Mapeadores.ventaDesde(id, venta), cambios: cambios);
+  }
 
-    final venta = Venta(
-      id: 'v-${DateTime.now().millisecondsSinceEpoch}',
-      numero: siguienteNumero(comprobante),
-      clienteNombre: clienteNombre,
-      items: items,
-      subtotal: subtotal,
-      igv: igv,
-      total: Dinero.r2(subtotal + igv),
-      metodoPago: metodoPago,
-      comprobante: comprobante,
-      fecha: DateTime.now(),
-      vendedorId: vendedorId,
-      vendedor: vendedor,
-      redondeo: redondeo,
-    );
-
-    _ventas.add(venta);
-    notifyListeners();
-    return venta;
+  @override
+  void dispose() {
+    _suscripcion?.cancel();
+    super.dispose();
   }
 }

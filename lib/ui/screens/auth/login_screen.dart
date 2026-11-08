@@ -21,43 +21,36 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _dniController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _cargando = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _dniController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _iniciarSesion() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_cargando || !_formKey.currentState!.validate()) return;
 
     setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-
-    if (!mounted) return;
-    final auth = context.read<AuthProvider>();
-    final ok = auth.iniciarSesion(
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    setState(() => _cargando = false);
-
-    if (!mounted) return;
-    if (ok) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.main, (route) => false);
-    } else {
+    try {
+      await context.read<AuthProvider>().iniciarSesion(
+            _dniController.text,
+            _passwordController.text,
+          );
+      if (!mounted) return;
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
+    } on AuthError catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Credenciales incorrectas. Verifica tu correo y contrasena.'),
-          backgroundColor: Color(0xFFD32F2F),
-        ),
+        SnackBar(content: Text(error.mensaje)),
       );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
     }
   }
 
@@ -81,84 +74,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     FadeSlide(
                       delay: const Duration(milliseconds: 100),
                       child: CustomTextField(
-                        etiqueta: 'Correo electronico',
-                        icono: Icons.email_outlined,
-                        controlador: _emailController,
-                        formateadores: Formatos.correo(60),
-                        tipoTeclado: TextInputType.emailAddress,
-                        validador: Validators.email,
-                        ayuda: 'ejemplo@correo.com',
+                        etiqueta: 'DNI',
+                        icono: Icons.badge_outlined,
+                        controlador: _dniController,
+                        formateadores: Formatos.digitos(8),
+                        tipoTeclado: TextInputType.number,
+                        validador: Validators.dni,
+                        ayuda: '8 dígitos',
                       ),
                     ),
                     const SizedBox(height: 18),
                     FadeSlide(
                       delay: const Duration(milliseconds: 200),
                       child: PasswordField(
-                        etiqueta: 'Contrasena',
+                        etiqueta: 'Contraseña',
                         controlador: _passwordController,
-                        validador: Validators.password,
+                        validador: Validators.requerido,
                       ),
                     ),
                     const SizedBox(height: 28),
                     FadeSlide(
                       delay: const Duration(milliseconds: 300),
                       child: AnimatedButton(
-                        texto: 'Iniciar sesion',
+                        texto: 'Iniciar sesión',
                         icono: Icons.login,
                         cargando: _cargando,
                         onPressed: _iniciarSesion,
                         ancho: double.infinity,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    FadeSlide(
-                      delay: const Duration(milliseconds: 400),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '¿No tienes una cuenta?',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.of(context)
-                                .pushNamed(AppRoutes.register),
-                            child: const Text('Registrate'),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FadeSlide(
-                      delay: const Duration(milliseconds: 500),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.info_outline,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'Administrador: admin@ferreteria.com / admin123\n'
-                                'Vendedor: vendedor@ferreteria.com / vendedor1',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  height: 1.45,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ],

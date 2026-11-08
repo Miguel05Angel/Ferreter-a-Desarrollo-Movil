@@ -234,10 +234,17 @@ class _ProductoDetalleScreenState extends State<ProductoDetalleScreen>
                               mensaje:
                                   '¿Estas seguro de eliminar "${producto.nombre}"? Esta accion no se puede deshacer.',
                               textoConfirmar: 'Eliminar',
-                              onConfirmar: () {
-                                context
-                                    .read<ProductoProvider>()
-                                    .eliminar(producto.id);
+                              onConfirmar: () async {
+                                try {
+                                  await context.read<ProductoProvider>().eliminar(producto.id);
+                                } catch (_) {
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('No se pudo eliminar el producto.')),
+                                  );
+                                  return;
+                                }
+                                if (!context.mounted) return;
                                 Navigator.of(context).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(

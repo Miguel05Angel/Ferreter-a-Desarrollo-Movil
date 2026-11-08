@@ -150,6 +150,8 @@ class Mapeadores {
         metodoPago: _s(m['metodoPago']),
         comprobante: _s(m['comprobante'], 'Boleta'),
         fecha: _f(m['fecha']),
+        estado: _s(m['estado'], 'Completada'),
+        vendedorId: _s(m['vendedorId']),
         vendedor: _s(m['vendedor']),
         redondeo: _d(m['redondeo']),
       );
@@ -164,6 +166,8 @@ class Mapeadores {
         'metodoPago': v.metodoPago,
         'comprobante': v.comprobante,
         'fecha': Timestamp.fromDate(v.fecha),
+        'estado': v.estado,
+        'vendedorId': v.vendedorId,
         'vendedor': v.vendedor,
         'redondeo': v.redondeo,
       };

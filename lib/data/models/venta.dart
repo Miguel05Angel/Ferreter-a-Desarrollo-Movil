@@ -25,6 +25,7 @@ class Venta {
   final String metodoPago;
   final String comprobante;
   final DateTime fecha;
+  final String estado;
 
   /// Quien registro la venta (vacio en ventas de ejemplo antiguas).
   final String vendedorId;
@@ -44,6 +45,7 @@ class Venta {
     required this.metodoPago,
     required this.comprobante,
     required this.fecha,
+    this.estado = 'Completada',
     this.vendedorId = '',
     this.vendedor = '',
     this.redondeo = 0,

@@ -5,7 +5,6 @@ import '../../../core/utils/formatos.dart';
 import '../../widgets/layout/appbar_taller.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/routes/app_routes.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
 import '../../widgets/animations/fade_slide.dart';
@@ -22,16 +21,17 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _dniController = TextEditingController();
   final _telefonoController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmarController = TextEditingController();
   bool _cargando = false;
+  late final _operacion = context.read<AuthProvider>().nuevaOperacion();
 
   @override
   void dispose() {
     _nombreController.dispose();
-    _emailController.dispose();
+    _dniController.dispose();
     _telefonoController.dispose();
     _passwordController.dispose();
     _confirmarController.dispose();
@@ -39,39 +39,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _registrar() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
+    if (_cargando || !_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-
-    final ok = context.read<AuthProvider>().registrar(
-          nombre: _nombreController.text,
-          email: _emailController.text,
-          telefono: _telefonoController.text,
-          password: _passwordController.text,
-        );
-
-    setState(() => _cargando = false);
-    if (!mounted) return;
-
-    if (ok) {
-      Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.main, (route) => false);
-    } else {
+    try {
+      await context.read<AuthProvider>().registrarVendedor(
+            operacion: _operacion,
+            nombre: _nombreController.text,
+            dni: _dniController.text,
+            telefono: _telefonoController.text,
+            password: _passwordController.text,
+          );
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ya existe una cuenta registrada con este correo.'),
-          backgroundColor: Color(0xFFD32F2F),
-        ),
+        const SnackBar(content: Text('Vendedor registrado.')),
       );
+      Navigator.of(context).pop();
+    } on AuthError catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.mensaje)),
+      );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (context.watch<AuthProvider>().usuarioActual?.rol != 'Administrador') {
+      return const Scaffold(
+        body: Center(child: Text('Acceso reservado al administrador.')),
+      );
+    }
     return Scaffold(
-      appBar: const AppBarTaller(mostrarCarrito: false, subtitulo: 'Registro', title: Text('Crear cuenta')),
+      appBar: const AppBarTaller(
+          mostrarCarrito: false,
+          subtitulo: 'Registro',
+          title: Text('Registrar vendedor')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -93,13 +97,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
               FadeSlide(
                 delay: const Duration(milliseconds: 80),
                 child: CustomTextField(
-                  etiqueta: 'Correo electronico',
-                  icono: Icons.email_outlined,
-                  controlador: _emailController,
-                  formateadores: Formatos.correo(60),
-                  tipoTeclado: TextInputType.emailAddress,
-                  validador: Validators.email,
-                  ayuda: 'ejemplo@correo.com',
+                  etiqueta: 'DNI',
+                  icono: Icons.badge_outlined,
+                  controlador: _dniController,
+                  formateadores: Formatos.digitos(8),
+                  tipoTeclado: TextInputType.number,
+                  validador: Validators.dni,
+                  ayuda: '8 dígitos',
                 ),
               ),
               const SizedBox(height: 18),
@@ -119,7 +123,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               FadeSlide(
                 delay: const Duration(milliseconds: 240),
                 child: PasswordField(
-                  etiqueta: 'Contrasena',
+                  etiqueta: 'Contraseña',
                   controlador: _passwordController,
                   validador: Validators.password,
                   ayuda: 'Minimo 6 caracteres y un numero',
@@ -129,17 +133,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               FadeSlide(
                 delay: const Duration(milliseconds: 320),
                 child: PasswordField(
-                  etiqueta: 'Confirmar contrasena',
+                  etiqueta: 'Confirmar contraseña',
                   controlador: _confirmarController,
-                  validador: (v) => Validators.confirmarPassword(
-                      v, _passwordController.text),
+                  validador: (v) =>
+                      Validators.confirmarPassword(v, _passwordController.text),
                 ),
               ),
               const SizedBox(height: 30),
               FadeSlide(
                 delay: const Duration(milliseconds: 400),
                 child: AnimatedButton(
-                  texto: 'Registrarme',
+                  texto: 'Registrar vendedor',
                   icono: Icons.person_add_alt,
                   cargando: _cargando,
                   onPressed: _registrar,

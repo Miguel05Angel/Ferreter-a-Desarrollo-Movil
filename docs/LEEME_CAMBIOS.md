@@ -21,8 +21,8 @@ El mapa usa Google Maps. Para verlo necesitas una clave:
 Sin clave el mapa sale gris, pero "Como llegar" y "Google Maps" abren la app de Google Maps igual.
 
 ## Cuentas de prueba
-- Administrador: admin@ferreteria.com / admin123
-- Vendedor: vendedor@ferreteria.com / vendedor1
+Consulta la [guía de la práctica 11](GUIA_11_FIREBASE.md) para crear las
+cuentas de prueba con DNI en los emuladores.
 
 ## Imagenes reales
 Mira `GUIA_IMAGENES_REALES.md`.

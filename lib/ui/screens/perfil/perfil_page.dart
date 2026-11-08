@@ -8,7 +8,10 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/carrito_provider.dart';
+import '../../../providers/cotizacion_borrador_provider.dart';
 import '../../../providers/theme_provider.dart';
+import 'usuarios_screen.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/feedback/confirm_dialog.dart';
 import '../../widgets/layout/section_header.dart';
@@ -50,13 +53,19 @@ class _PerfilPageState extends State<PerfilPage> {
       ),
     );
 
-    if (resultado != null && resultado.trim().length >= 3) {
+    if (!mounted || resultado == null || resultado.trim().length < 3) return;
+    try {
+      await context.read<AuthProvider>().actualizarNombre(resultado);
       if (!mounted) return;
-      context.read<AuthProvider>().actualizarNombre(resultado);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Nombre actualizado'),
             backgroundColor: Color(0xFF2E7D32)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo actualizar el nombre.')),
       );
     }
   }
@@ -122,7 +131,7 @@ class _PerfilPageState extends State<PerfilPage> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  usuario?.email ?? '',
+                                  usuario == null ? '' : 'DNI ${usuario.dni}',
                                   style: const TextStyle(
                                       fontFamily: 'monospace',
                                       color: Color(0x99EDE8DF),
@@ -191,6 +200,18 @@ class _PerfilPageState extends State<PerfilPage> {
               ],
             ),
           ),
+          if (Permisos.de(context).esAdmin) ...[
+            const SectionHeader(titulo: 'Administración'),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.manage_accounts_outlined),
+                title: const Text('Usuarios'),
+                subtitle: const Text('Registrar y consultar vendedores'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => AppRoutes.push(context, const UsuariosScreen()),
+              ),
+            ),
+          ],
           const SectionHeader(titulo: 'Cuenta'),
           Card(
             child: Column(
@@ -232,8 +253,14 @@ class _PerfilPageState extends State<PerfilPage> {
                   titulo: 'Cerrar sesion',
                   mensaje: '¿Deseas cerrar sesion en la aplicacion?',
                   textoConfirmar: 'Cerrar sesion',
-                  onConfirmar: () {
-                    context.read<AuthProvider>().cerrarSesion();
+                  onConfirmar: () async {
+                    final auth = context.read<AuthProvider>();
+                    final carrito = context.read<CarritoProvider>();
+                    final borrador = context.read<CotizacionBorradorProvider>();
+                    await auth.cerrarSesion();
+                    carrito.limpiar();
+                    borrador.limpiar();
+                    if (!context.mounted) return;
                     Navigator.of(context).pushNamedAndRemoveUntil(
                         AppRoutes.login, (route) => false);
                   },

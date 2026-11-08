@@ -62,6 +62,7 @@ class _VerificacionClaveDialogState extends State<VerificacionClaveDialog>
   late final AnimationController _vibrar = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 380));
   bool _oculta = true;
+  bool _verificando = false;
   String? _error;
 
   @override
@@ -71,18 +72,28 @@ class _VerificacionClaveDialogState extends State<VerificacionClaveDialog>
     super.dispose();
   }
 
-  void _confirmar() {
+  Future<void> _confirmar() async {
+    if (_verificando) return;
     if (_clave.text.isEmpty) {
       setState(() => _error = 'Escribe tu contraseña');
       _vibrar.forward(from: 0);
       return;
     }
-    if (context.read<AuthProvider>().verificarPassword(_clave.text)) {
-      Navigator.of(context).pop(true);
-    } else {
-      setState(() => _error = 'Contraseña incorrecta');
-      _vibrar.forward(from: 0);
-      _clave.clear();
+    setState(() => _verificando = true);
+    try {
+      final valida = await context.read<AuthProvider>().verificarPassword(_clave.text);
+      if (!mounted) return;
+      if (valida) {
+        Navigator.of(context).pop(true);
+      } else {
+        setState(() => _error = 'Contraseña incorrecta');
+        _vibrar.forward(from: 0);
+        _clave.clear();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'No se pudo verificar la contraseña');
+    } finally {
+      if (mounted) setState(() => _verificando = false);
     }
   }
 
@@ -152,7 +163,7 @@ class _VerificacionClaveDialogState extends State<VerificacionClaveDialog>
                       Expanded(
                         flex: 2,
                         child: FilledButton(
-                          onPressed: _confirmar,
+                          onPressed: _verificando ? null : _confirmar,
                           style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14)),
                           child: Text(widget.textoConfirmar),

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/layout/appbar_taller.dart';
@@ -52,6 +53,7 @@ class _PagoScreenState extends State<PagoScreen> {
   int _fase = 0; // 0 elegir, 1 procesando, 2 listo
   String _mensaje = '';
   Venta? _venta;
+  late final String _idVenta = context.read<VentaProvider>().nuevoIdVenta();
   String? _cotizacionPagada; // numero de la cotizacion saldada (si hubo)
 
   static const _metodos = <_Metodo>[
@@ -111,6 +113,7 @@ class _PagoScreenState extends State<PagoScreen> {
   }
 
   Future<void> _pagar() async {
+    if (_fase != 0 || _metodo == null) return;
     setState(() {
       _fase = 1;
       _mensaje = 'VALIDANDO PAGO';
@@ -122,20 +125,27 @@ class _PagoScreenState extends State<PagoScreen> {
     if (!mounted) return;
 
     final carrito = context.read<CarritoProvider>();
-    final venta = context.read<VentaProvider>().registrar(
-          clienteNombre: widget.cliente?.nombre ?? 'Publico en general',
-          items: carrito.aItemsVenta(),
-          metodoPago: _metodo!,
-          comprobante: widget.comprobante,
-          vendedorId: context.read<AuthProvider>().usuarioActual?.id ?? '',
-          vendedor: context.read<AuthProvider>().usuarioActual?.nombre ?? '',
-          redondeo: _metodo == 'Efectivo' ? Dinero.redondeoEfectivo(_total) : 0,
-        );
-    context.read<ProductoProvider>().descontarStock(
-          carrito.items
-              .map((i) => (productoId: i.producto.id, cantidad: i.cantidad))
-              .toList(),
-        );
+    late final Venta venta;
+    try {
+      final resultado = await context.read<VentaProvider>().registrar(
+        id: _idVenta,
+        clienteNombre: widget.cliente?.nombre ?? 'Publico en general',
+        items: carrito.aItemsVenta(),
+        metodoPago: _metodo!,
+        comprobante: widget.comprobante,
+      );
+      if (!mounted) return;
+      venta = resultado.venta;
+      context.read<ProductoProvider>().avisarStock(resultado.cambios);
+    } on FirebaseFunctionsException catch (error) {
+      if (!mounted) return;
+      setState(() => _fase = 0);
+      final mensaje = error.code == 'failed-precondition'
+          ? error.message ?? 'Revisa el stock del carrito.'
+          : 'No se pudo confirmar la venta. Vuelve a intentar desde esta pantalla.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+      return;
+    }
     // Si el carrito venia de una cotizacion, queda saldada (PAGADA).
     final cotId = carrito.cotizacionId;
     if (cotId != null) {
