@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import '../data/models/usuario.dart';
 import '../services/firebase_ferreteria.dart';
@@ -23,10 +24,6 @@ class AuthProvider extends ChangeNotifier {
       );
       
       final uid = credencial.user!.uid;
-      debugPrint('🔍 UID DEL USUARIO: "$uid"');
-      
-      // ESTO NOS DIRÁ A QUÉ BASE DE DATOS SE ESTÁ CONECTANDO REALMENTE
-      debugPrint('🔍 CONECTADO A LA BASE DE DATOS: "${_perfiles.firestore.databaseId}"');
       
       // Forzamos la lectura desde el servidor
       final perfil = await _perfiles.doc(uid).get(const GetOptions(source: Source.server));
@@ -34,24 +31,12 @@ class AuthProvider extends ChangeNotifier {
       final datos = perfil.data();
       
       if (datos == null || !perfil.exists) {
-        debugPrint('❌ DOCUMENTO NO ENCONTRADO EN FIRESTORE. Listando usuarios existentes...');
-        final todos = await _perfiles.get(const GetOptions(source: Source.server));
-        if (todos.docs.isEmpty) {
-           debugPrint('⚠️ LA COLECCIÓN "usuarios" ESTÁ TOTALMENTE VACÍA.');
-        } else {
-           for (var doc in todos.docs) {
-             debugPrint('📄 Usuario encontrado con ID: ${doc.id}');
-           }
-        }
         throw const AuthError('No se encontró el perfil. Revisa el UID en Firestore.');
       }
 
       final dniApp = dni.trim();
       final dniEnFirestore = datos['dni']?.toString().trim() ?? '';
       final rolEnFirestore = datos['rol']?.toString().trim().toLowerCase() ?? '';
-
-      debugPrint('DNI App: "$dniApp" | DNI Firestore: "$dniEnFirestore"');
-      debugPrint('Rol Firestore: "$rolEnFirestore"');
 
       if (dniEnFirestore != dniApp || !['administrador', 'vendedor'].contains(rolEnFirestore)) {
         throw const AuthError('El perfil no coincide. Revisa los datos en Firestore.');
@@ -101,7 +86,7 @@ class AuthProvider extends ChangeNotifier {
   String nuevaOperacion() => _perfiles.doc().id;
 
   Future<void> registrarVendedor({
-    required String operacion,
+    required String operacion, // Se mantiene por compatibilidad con la UI
     required String dni,
     required String nombre,
     required String telefono,
@@ -110,23 +95,44 @@ class AuthProvider extends ChangeNotifier {
     if (_usuarioActual?.rol.toLowerCase() != 'administrador') {
       throw const AuthError('Solo un administrador puede registrar vendedores.');
     }
+    
     try {
-      await FirebaseFerreteria.funciones
-          .httpsCallable('registrarVendedor')
-          .call({
-        'operacion': operacion,
+      // 1. Inicializar una app secundaria para no cerrar la sesión del administrador
+      FirebaseApp secondaryApp = await Firebase.initializeApp(
+        name: 'SecondaryApp_${DateTime.now().millisecondsSinceEpoch}', // Nombre único
+        options: Firebase.app().options,
+      );
+
+      // 2. Crear el usuario en Authentication
+      UserCredential credenciales = await FirebaseAuth.instanceFor(app: secondaryApp)
+          .createUserWithEmailAndPassword(
+        email: '${dni.trim()}@acceso.ferreteria.invalid',
+        password: password,
+      );
+
+      String nuevoUid = credenciales.user!.uid;
+
+      // 3. Guardar sus datos en Firestore (Base de datos ferreteria-db)
+      await FirestoreService.instance.db.collection('usuarios').doc(nuevoUid).set({
         'dni': dni.trim(),
         'nombre': nombre.trim(),
         'telefono': telefono.trim(),
-        'password': password,
+        'rol': 'Vendedor',
       });
-    } on FirebaseFunctionsException catch (error) {
-      throw AuthError(switch (error.code) {
-        'already-exists' => 'Este DNI ya está registrado.',
-        'invalid-argument' => 'Revisa el DNI, el nombre, el teléfono y la contraseña.',
-        'permission-denied' || 'unauthenticated' => 'Se requiere una sesión de administrador.',
-        _ => 'No se pudo completar el alta. Revisa la conexión y la función de Firebase.',
-      });
+
+      // 4. Limpiar la sesión secundaria para no dejar procesos abiertos
+      await FirebaseAuth.instanceFor(app: secondaryApp).signOut();
+      await secondaryApp.delete();
+      
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw const AuthError('Este DNI ya está registrado.');
+      }
+      throw AuthError('Error de Firebase Auth: ${e.message}');
+    } on FirebaseException catch (e) {
+      throw AuthError('Error de Firestore: ${e.message}');
+    } catch (e) {
+      throw AuthError('Error inesperado al registrar: $e');
     }
   }
 
