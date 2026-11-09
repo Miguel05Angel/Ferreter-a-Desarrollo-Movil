@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# Claves de API: cada uno pone la suya (ver docs/CLAVES.md)
+secrets.properties
