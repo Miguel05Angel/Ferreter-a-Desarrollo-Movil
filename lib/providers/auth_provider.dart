@@ -21,37 +21,71 @@ class AuthProvider extends ChangeNotifier {
         email: '${dni.trim()}@acceso.ferreteria.invalid',
         password: password,
       );
-      final perfil = await _perfiles
-          .doc(credencial.user!.uid)
-          .get(const GetOptions(source: Source.server));
+      
+      final uid = credencial.user!.uid;
+      debugPrint('🔍 UID DEL USUARIO: "$uid"');
+      
+      // ESTO NOS DIRÁ A QUÉ BASE DE DATOS SE ESTÁ CONECTANDO REALMENTE
+      debugPrint('🔍 CONECTADO A LA BASE DE DATOS: "${_perfiles.firestore.databaseId}"');
+      
+      // Forzamos la lectura desde el servidor
+      final perfil = await _perfiles.doc(uid).get(const GetOptions(source: Source.server));
+          
       final datos = perfil.data();
-      if (datos == null ||
-          datos['dni'] != dni.trim() ||
-          !['Administrador', 'Vendedor'].contains(datos['rol'])) {
-        throw const AuthError('La cuenta no tiene un perfil autorizado.');
+      
+      if (datos == null || !perfil.exists) {
+        debugPrint('❌ DOCUMENTO NO ENCONTRADO EN FIRESTORE. Listando usuarios existentes...');
+        final todos = await _perfiles.get(const GetOptions(source: Source.server));
+        if (todos.docs.isEmpty) {
+           debugPrint('⚠️ LA COLECCIÓN "usuarios" ESTÁ TOTALMENTE VACÍA.');
+        } else {
+           for (var doc in todos.docs) {
+             debugPrint('📄 Usuario encontrado con ID: ${doc.id}');
+           }
+        }
+        throw const AuthError('No se encontró el perfil. Revisa el UID en Firestore.');
       }
-      if (datos['rol'] == 'Administrador') {
-        await FirestoreService.instance.prepararCatalogo();
+
+      final dniApp = dni.trim();
+      final dniEnFirestore = datos['dni']?.toString().trim() ?? '';
+      final rolEnFirestore = datos['rol']?.toString().trim().toLowerCase() ?? '';
+
+      debugPrint('DNI App: "$dniApp" | DNI Firestore: "$dniEnFirestore"');
+      debugPrint('Rol Firestore: "$rolEnFirestore"');
+
+      if (dniEnFirestore != dniApp || !['administrador', 'vendedor'].contains(rolEnFirestore)) {
+        throw const AuthError('El perfil no coincide. Revisa los datos en Firestore.');
       }
+
+      if (rolEnFirestore == 'administrador') {
+        try {
+          await FirestoreService.instance.prepararCatalogo();
+        } catch (e) {
+          debugPrint('Advertencia: No se pudo preparar el catálogo: $e');
+        }
+      }
+      
       _usuarioActual = Usuario.desdeFirestore(perfil.id, datos);
       notifyListeners();
+      
     } on FirebaseAuthException catch (error) {
       throw AuthError(switch (error.code) {
         'network-request-failed' => 'Revisa tu conexión e inténtalo de nuevo.',
-        'too-many-requests' =>
-          'Demasiados intentos. Vuelve a probar en unos minutos.',
-        'operation-not-allowed' =>
-          'El acceso por contraseña aún no está habilitado.',
+        'too-many-requests' => 'Demasiados intentos. Vuelve a probar en unos minutos.',
+        'operation-not-allowed' => 'El acceso por contraseña aún no está habilitado.',
         _ => 'Verifica tu DNI y contraseña.',
       });
     } on FirebaseException catch (error) {
       await _auth.signOut();
       throw AuthError(error.code == 'permission-denied'
-          ? 'La cuenta no tiene un perfil autorizado.'
-          : 'No se pudo preparar el acceso a Firestore.');
+          ? 'Permiso denegado en Firestore. Revisa las Reglas.'
+          : 'Error de Firestore: ${error.message}');
     } on AuthError {
       await _auth.signOut();
       rethrow;
+    } catch (e) {
+      await _auth.signOut();
+      throw AuthError('Error inesperado: $e');
     }
   }
 
@@ -73,9 +107,8 @@ class AuthProvider extends ChangeNotifier {
     required String telefono,
     required String password,
   }) async {
-    if (_usuarioActual?.rol != 'Administrador') {
-      throw const AuthError(
-          'Solo un administrador puede registrar vendedores.');
+    if (_usuarioActual?.rol.toLowerCase() != 'administrador') {
+      throw const AuthError('Solo un administrador puede registrar vendedores.');
     }
     try {
       await FirebaseFerreteria.funciones
@@ -90,13 +123,9 @@ class AuthProvider extends ChangeNotifier {
     } on FirebaseFunctionsException catch (error) {
       throw AuthError(switch (error.code) {
         'already-exists' => 'Este DNI ya está registrado.',
-        'invalid-argument' =>
-          'Revisa el DNI, el nombre, el teléfono y la contraseña.',
-        'permission-denied' ||
-        'unauthenticated' =>
-          'Se requiere una sesión de administrador.',
-        _ =>
-          'No se pudo completar el alta. Revisa la conexión y la función de Firebase.',
+        'invalid-argument' => 'Revisa el DNI, el nombre, el teléfono y la contraseña.',
+        'permission-denied' || 'unauthenticated' => 'Se requiere una sesión de administrador.',
+        _ => 'No se pudo completar el alta. Revisa la conexión y la función de Firebase.',
       });
     }
   }

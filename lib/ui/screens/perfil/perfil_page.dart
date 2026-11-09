@@ -267,7 +267,7 @@ class _PerfilPageState extends State<PerfilPage> {
                     final auth = context.read<AuthProvider>();
                     final carrito = context.read<CarritoProvider>();
                     final borrador = context.read<CotizacionBorradorProvider>();
-                    await auth.cerrarSesion();
+               await auth.cerrarSesion();
                     carrito.limpiar();
                     borrador.limpiar();
                     if (!context.mounted) return;
