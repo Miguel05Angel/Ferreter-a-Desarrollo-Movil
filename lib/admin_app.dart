@@ -96,7 +96,7 @@ class _SoloAdministradores extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               OutlinedButton.icon(
-                onPressed: sesion.cerrarSesion,
+                onPressed: () => sesion.cerrarSesion(),
                 icon: const Icon(Icons.logout),
                 label: const Text('Cerrar sesion'),
               ),

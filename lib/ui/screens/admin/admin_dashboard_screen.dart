@@ -81,7 +81,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             tooltip: 'Cerrar sesion',
             icon: const Icon(Icons.logout),
-            onPressed: context.read<AuthProvider>().cerrarSesion,
+            onPressed: () => context.read<AuthProvider>().cerrarSesion(), // <-- CORREGIDO
           ),
           const SizedBox(width: 8),
         ],
