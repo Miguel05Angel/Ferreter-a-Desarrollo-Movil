@@ -123,9 +123,9 @@ antes ya no está.
 
 ---
 
-## Pendiente aparte: el `applicationId`
+## El `applicationId`: commit aparte, NO mergear todavía
 
-El proyecto todavía usa el identificador de plantilla de Flutter:
+En `main` el proyecto usa el identificador de plantilla de Flutter:
 
 ```
 applicationId = "com.example.ferreteria_app"   <- placeholder
@@ -140,16 +140,23 @@ nombre de paquete. Si se registra `com.example.ferreteria_app` y luego se
 cambia al definitivo, **los mapas dejan de cargar** y cuesta mucho dar con el
 motivo.
 
-### Por qué no se arregla en esta rama
+### Por qué el commit está separado
 
-Cambiar el `applicationId` rompe el build, y no por nuestra culpa:
+Cambiar el `applicationId` rompe el build mientras no se haga un paso en la
+consola de Firebase, y no por culpa del cambio en sí:
 
 ```
 android/app/google-services.json  ->  "package_name": "com.example.ferreteria_app"
 ```
 
 El plugin de Google Services compara ese valor con el `applicationId` y, si no
-coinciden, falla con `No matching client found for package name`.
+coinciden, falla. Comprobado sobre este commit:
+
+```
+FAILURE: Build failed with an exception.
+> No matching client found for package name 'com.elconstructor.ferreteria_app'
+  in android/app/google-services.json
+```
 
 Para cambiarlo hace falta, **en este orden**:
 
@@ -163,6 +170,22 @@ Para cambiarlo hace falta, **en este orden**:
 El paso 1 solo lo puede hacer quien tenga acceso al proyecto de Firebase. El
 commit que hace los pasos 3 y 4 está en esta rama, **marcado y separado**: no
 hay que mergearlo hasta tener el `google-services.json` nuevo en su sitio.
+
+---
+
+## Verificación
+
+No es teoría: se compiló un APK de debug en cada caso, con Flutter 3.47.9 y
+Gradle 9.3.1.
+
+| Caso | Resultado |
+|---|---|
+| Commit de la clave, **sin** `secrets.properties` | Compila. Manifiesto fusionado: `android:value=""` |
+| Commit de la clave, **con** `secrets.properties` | Compila. Manifiesto fusionado: la clave real, sin rastro del placeholder |
+| Commit del `applicationId` | **Falla**, con el error de arriba |
+
+Lo que **no** se probó: ejecutar la app con un mapa en pantalla. Hace falta un
+dispositivo y una clave ya restringida.
 
 ---
 

@@ -36,7 +36,7 @@ class DefaultFirebaseOptions {
         throw UnsupportedError(
           'Falta registrar la app iOS en Firebase Console.\n'
           'El Bundle ID debe ser el mismo que el applicationId de Android: '
-          'com.example.ferreteria_app\n'
+          'com.elconstructor.ferreteria_app\n'
           'Despues ejecuta: flutterfire configure',
         );
       default:
