@@ -1,12 +1,10 @@
 import 'dart:math' as math;
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
-
-import '../../widgets/layout/appbar_taller.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../widgets/layout/appbar_taller.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/dinero.dart';
@@ -126,26 +124,39 @@ class _PagoScreenState extends State<PagoScreen> {
 
     final carrito = context.read<CarritoProvider>();
     late final Venta venta;
+    
     try {
+      // Obtenemos el usuario actual para saber quién realiza la venta
+      final usuario = context.read<AuthProvider>().usuarioActual;
+
       final resultado = await context.read<VentaProvider>().registrar(
         id: _idVenta,
         clienteNombre: widget.cliente?.nombre ?? 'Publico en general',
         items: carrito.aItemsVenta(),
         metodoPago: _metodo!,
         comprobante: widget.comprobante,
+        vendedorId: usuario?.id ?? 'Desconocido',      // <-- AHORA SÍ SE ENVÍA
+        vendedorNombre: usuario?.nombre ?? 'Caja 01',  // <-- AHORA SÍ SE ENVÍA
       );
       if (!mounted) return;
       venta = resultado.venta;
       context.read<ProductoProvider>().avisarStock(resultado.cambios);
-    } on FirebaseFunctionsException catch (error) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _fase = 0);
-      final mensaje = error.code == 'failed-precondition'
-          ? error.message ?? 'Revisa el stock del carrito.'
-          : 'No se pudo confirmar la venta. Vuelve a intentar desde esta pantalla.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+      
+      // Mostrar el error real en pantalla
+      final mensaje = e.toString().replaceAll('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(mensaje, style: const TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: AppTheme.danger,
+          duration: const Duration(seconds: 6),
+        )
+      );
       return;
     }
+    
     // Si el carrito venia de una cotizacion, queda saldada (PAGADA).
     final cotId = carrito.cotizacionId;
     if (cotId != null) {

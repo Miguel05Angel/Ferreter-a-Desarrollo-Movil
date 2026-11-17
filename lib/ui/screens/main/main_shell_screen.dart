@@ -118,6 +118,34 @@ class _MainShellScreenState extends State<MainShellScreen>
   }
 
   void _ir(int i) {
+    // 1. Intercepción de seguridad: Bloquear acceso al carrito si está vacío.
+    if (i == 3) {
+      final carrito = context.read<CarritoProvider>();
+      if (carrito.cantidadItems == 0) {
+        // Mostrar aviso al usuario
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppTheme.primary, // Usa el naranja de la marca
+            behavior: SnackBarBehavior.floating,
+            content: const Text(
+              'Tu carrito está vacío. Agrega productos primero.',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        
+        // Redirigir forzosamente a Productos (índice 1)
+        if (_indice != 1) {
+          i = 1; 
+        } else {
+          return; // Si ya estamos en Productos, no hacer nada más
+        }
+      }
+    }
+
+    // 2. Flujo normal de navegación
     if (i == _indice) return;
     setState(() {
       _direccion = i > _indice ? 1 : -1;
@@ -125,7 +153,6 @@ class _MainShellScreenState extends State<MainShellScreen>
     });
     ShellNavegacion.indice.value = i;
     _transicion.forward(from: 0);
-
   }
 
   @override
