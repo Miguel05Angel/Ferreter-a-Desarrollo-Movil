@@ -13,35 +13,25 @@ class FirebaseFerreteria {
   static FirebaseAuth get auth => FirebaseAuth.instanceFor(app: _app);
   static FirebaseFunctions get funciones =>
       FirebaseFunctions.instanceFor(app: _app);
+      
+  // 🔥 ESTA ES LA LÍNEA MÁGICA: NO TIENE 'ferreteria-db'
   static FirebaseFirestore get db => FirebaseFirestore.instanceFor(
         app: _app,
-        databaseId: 'ferreteria-db',
       );
 
   static Future<void> inicializar() async {
-    const host = String.fromEnvironment('FIREBASE_EMULADOR');
-    if (kReleaseMode || host.isEmpty) {
-      // Con opciones explicitas: en Android bastaria con google-services.json,
-      // pero en web ese archivo no existe e initializeApp() sin opciones
-      // falla. DefaultFirebaseOptions cubre ambas plataformas.
+    try {
       _app = await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      return;
+      print("🚀 Firebase inicializado con éxito.");
+    } on FirebaseException catch (e) {
+      if (e.code == 'duplicate-app') {
+        print("✅ Firebase ya estaba encendido por Android. Reutilizando...");
+        _app = Firebase.app();
+      } else {
+        rethrow;
+      }
     }
-
-    _app = await Firebase.initializeApp(
-      name: 'ferreteria-local',
-      options: const FirebaseOptions(
-        // Firebase Installations valida el formato incluso en el emulador.
-        apiKey: 'AIza00000000000000000000000000000000000',
-        appId: '1:1:android:1',
-        messagingSenderId: '1',
-        projectId: 'demo-ferreteria',
-      ),
-    );
-    await auth.useAuthEmulator(host, 9099, automaticHostMapping: false);
-    db.useFirestoreEmulator(host, 8080, automaticHostMapping: false);
-    funciones.useFunctionsEmulator(host, 5001, automaticHostMapping: false);
   }
 }
