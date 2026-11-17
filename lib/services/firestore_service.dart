@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart'; // <-- IMPORTANTE: Añadir esta línea
 
 import '../data/firestore_mappers.dart';
 import '../data/mock_data.dart';
@@ -10,11 +9,8 @@ class FirestoreService {
   FirestoreService._();
   static final instance = FirestoreService._();
 
-  // 🔥 AQUÍ FORZAMOS LA CONEXIÓN A TU BASE DE DATOS 'ferreteria-db'
-  final db = FirebaseFirestore.instanceFor(
-    app: Firebase.app(),
-    databaseId: 'ferreteria-db', 
-  );
+  // 🔥 Usa la conexión de FirebaseFerreteria (que ya apunta a la base nueva)
+  final db = FirebaseFerreteria.db;
 
   CollectionReference<Mapa> get productos => db.collection('productos');
   CollectionReference<Mapa> get ventas => db.collection('ventas');
@@ -24,7 +20,6 @@ class FirestoreService {
     if ((await marca.get(const GetOptions(source: Source.server))).exists)
       return;
 
-    // Respeta un catálogo ya cargado en esta base.
     final actual =
         await productos.limit(1).get(const GetOptions(source: Source.server));
 

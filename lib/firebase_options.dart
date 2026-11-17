@@ -23,11 +23,7 @@ class DefaultFirebaseOptions {
 
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'Falta registrar la app Web en Firebase Console.\n'
-        'Console > Configuracion del proyecto > Agregar aplicacion > Web (</>)\n'
-        'y despues ejecuta: flutterfire configure',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -48,11 +44,21 @@ class DefaultFirebaseOptions {
   }
 
   /// Tomado de android/app/google-services.json (proyecto ferreteria-app-16bde).
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBmLDW2IkdP6KNyxAc_pvmkhuNn7Ru9SQ4',
-    appId: '1:100244183370:android:d3ae26e6c98a2e587d89b3',
-    messagingSenderId: '100244183370',
-    projectId: 'ferreteria-app-16bde',
-    storageBucket: 'ferreteria-app-16bde.firebasestorage.app',
+    apiKey: 'AIzaSyD4oalehEv-epYe-8tlNjToDY22Vv7PRKY',
+    appId: '1:216446212508:android:71d539cc5108e292cbd059',
+    messagingSenderId: '216446212508',
+    projectId: 'ferreteria-el-constructor',
+    storageBucket: 'ferreteria-el-constructor.firebasestorage.app',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyD_oGZUNd23s9WjcW7x77PNw9qhLGb1moE',
+    appId: '1:216446212508:web:de19719c6791698dcbd059',
+    messagingSenderId: '216446212508',
+    projectId: 'ferreteria-el-constructor',
+    authDomain: 'ferreteria-el-constructor.firebaseapp.com',
+    storageBucket: 'ferreteria-el-constructor.firebasestorage.app',
+    measurementId: 'G-Y7MCR5E67L',
   );
 }
