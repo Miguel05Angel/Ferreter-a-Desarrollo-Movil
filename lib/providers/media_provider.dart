@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/models/producto_media.dart';
+import '../data/catalogo_fotos_drive.dart';
+import '../data/catalogo_fotos_referencia.dart';
 import '../services/media_service.dart';
 
 enum EstadoMedia { sinConfigurar, cargando, listo, error }
@@ -9,16 +11,28 @@ enum EstadoMedia { sinConfigurar, cargando, listo, error }
 /// responde que recursos tiene cada producto.
 class MediaProvider extends ChangeNotifier {
   Map<String, ProductoMedia> _mapa = {};
-  EstadoMedia _estado = EstadoMedia.sinConfigurar;
+  EstadoMedia _estado = EstadoMedia.listo;
 
   EstadoMedia get estado => _estado;
 
   ProductoMedia? de(String codigo) {
     // Forzamos mayúsculas y quitamos espacios para evitar fallos de coincidencia
-    final key = codigo.trim().toUpperCase(); 
-    
-    // Buscamos directamente en el JSON descargado
-    final m = _mapa[key];
+    final key = codigo.trim().toUpperCase();
+
+    // Las fotos del Drive compartido se asocian por código; conservamos 3D y 360 del manifiesto.
+    final remoto = _mapa[key];
+    final codigoFoto = equivalenciasFotosDrive[key] ?? key;
+    final referencia = fotosReferenciaDrive[key];
+    final fotoDrive = referencia ?? catalogoFotosDrive[codigoFoto];
+    final m = fotoDrive == null
+        ? remoto
+        : ProductoMedia(
+            codigo: key,
+            fotos: [fotoDrive],
+            fotoReferencial: referencia != null,
+            modelo3d: remoto?.modelo3d,
+            giro360: remoto?.giro360 ?? const [],
+          );
     return (m != null && m.tieneAlgo) ? m : null;
   }
 
@@ -36,10 +50,12 @@ class MediaProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _mapa = await MediaService.cargarManifiesto();
-      _estado = _mapa.isEmpty ? EstadoMedia.sinConfigurar : EstadoMedia.listo;
+      _estado = EstadoMedia.listo;
     } catch (e) {
       debugPrint('MediaProvider: $e');
-      _estado = EstadoMedia.error;
+      // Las referencias a las fotos de Drive siguen disponibles aunque
+      // falle la descarga del manifiesto opcional de recursos 3D y 360.
+      _estado = EstadoMedia.listo;
     }
     notifyListeners();
   }

@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'admin_app.dart';
 import 'app.dart';
 import 'services/firebase_ferreteria.dart';
+import 'services/foto_perfil_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final firebaseListo = await _iniciarFirebase();
+  await FotoPerfilService.instance.recuperarPendiente();
 
   // Mismo codigo, dos caras: en el navegador arranca el panel administrativo
   // y en el telefono la app de la ferreteria.

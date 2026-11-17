@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import '../data/models/usuario.dart';
 import '../services/firebase_ferreteria.dart';
 import '../services/firestore_service.dart';
+import '../services/foto_perfil_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final _auth = FirebaseFerreteria.auth;
@@ -158,12 +158,27 @@ class AuthProvider extends ChangeNotifier {
     if (actual == null) return;
     await _perfiles.doc(actual.id).update({'nombre': nombre.trim()});
     if (_usuarioActual?.id != actual.id) return;
-    _usuarioActual = Usuario(
-      id: actual.id,
-      dni: actual.dni,
-      nombre: nombre.trim(),
-      telefono: actual.telefono,
-      rol: actual.rol,
+    _usuarioActual = _usuarioActual!.copyWith(nombre: nombre.trim());
+    notifyListeners();
+  }
+
+  Future<void> actualizarFotoPerfil(
+    Uint8List? foto, {
+    required String usuarioId,
+  }) async {
+    if (_usuarioActual?.id != usuarioId || _auth.currentUser?.uid != usuarioId) {
+      throw const AuthError('Inicia sesión con tu cuenta para cambiar la foto.');
+    }
+    if (foto != null && foto.length > FotoPerfilService.maxBytes) {
+      throw const AuthError('La foto pesa demasiado. Elige otra imagen.');
+    }
+    await _perfiles.doc(usuarioId).update({
+      'fotoPerfil': foto == null ? null : Blob(foto),
+    });
+    if (_usuarioActual?.id != usuarioId) return;
+    _usuarioActual = _usuarioActual!.copyWith(
+      fotoPerfil: foto,
+      quitarFoto: foto == null,
     );
     notifyListeners();
   }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/categoria.dart';
 import '../../../data/models/producto.dart';
+import '../../../providers/media_provider.dart';
 import '../media/producto_imagen.dart';
 import '../visual/escala_grises.dart';
-import '../visual/producto_illustration.dart';
 import '../visual/tilt_3d.dart';
 
 /// Tarjeta del catalogo en cuadricula. Si el producto esta agotado toda la
@@ -34,6 +35,9 @@ class ProductoTarjeta extends StatelessWidget {
   Widget build(BuildContext context) {
     final primario = Theme.of(context).colorScheme.primary;
     final agotado = producto.agotado;
+    final referencial =
+        context.watch<MediaProvider>().de(producto.codigo)?.fotoReferencial ??
+            false;
     final stockColor = agotado
         ? Colors.red
         : (producto.critico ? Colors.orange.shade800 : Colors.green);
@@ -71,16 +75,7 @@ class ProductoTarjeta extends StatelessWidget {
                       child: Container(
                         height: 108,
                         width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              categoria.color.withOpacity(0.10),
-                              categoria.color.withOpacity(0.24),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
+                        color: Colors.white,
                         child: Stack(
                           children: [
                             Center(
@@ -94,6 +89,16 @@ class ProductoTarjeta extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            if (referencial)
+                              const Positioned(
+                                bottom: 4,
+                                right: 6,
+                                child: Text('Referencial',
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: Colors.black54,
+                                        backgroundColor: Colors.white)),
+                              ),
                             if (producto.critico)
                               Positioned(
                                 top: 8,
@@ -150,7 +155,7 @@ class ProductoTarjeta extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 7, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: stockColor.withOpacity(0.12),
+                                    color: stockColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(7),
                                   ),
                                   child: Text(
@@ -201,8 +206,9 @@ class ProductoTarjeta extends StatelessWidget {
                                             final caja = ctx.findRenderObject();
                                             if (caja is RenderBox &&
                                                 caja.hasSize) {
-                                              origen = caja.localToGlobal(
-                                                  caja.size.center(Offset.zero));
+                                              origen = caja.localToGlobal(caja
+                                                  .size
+                                                  .center(Offset.zero));
                                             }
                                             onAgregar(origen);
                                           },

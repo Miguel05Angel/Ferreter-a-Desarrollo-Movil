@@ -8,6 +8,7 @@ class ProductoMedia {
 
   /// Fotografias estandar (frontal, posterior, detalles).
   final List<String> fotos;
+  final bool fotoReferencial;
 
   /// Secuencia de fotos para la vista 360 (24 a 36 tomas, en orden).
   final List<String> giro360;
@@ -16,6 +17,7 @@ class ProductoMedia {
     required this.codigo,
     this.modelo3d,
     this.fotos = const [],
+    this.fotoReferencial = false,
     this.giro360 = const [],
   });
 

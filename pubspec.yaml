@@ -19,6 +19,8 @@ dependencies:
   cloud_firestore: ^7.1.0
   cloud_functions: ^7.0.1
   provider: ^6.1.2
+  image_picker: ^1.2.4
+  image: ^4.13.1
   intl: ^0.19.0
   url_launcher: ^6.3.1
   # Sensores del telefono (Guia 13, seccion 1)
