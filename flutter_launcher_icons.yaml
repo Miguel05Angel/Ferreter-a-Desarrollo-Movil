@@ -1,0 +1,30 @@
+# Configuración de flutter_launcher_icons para ferreteria_app.
+# Este archivo es leído automáticamente por el comando 'dart run flutter_launcher_icons'.
+flutter_launcher_icons:
+  # --- Imagen fuente global ---
+  # Debe ser un PNG cuadrado de al menos 1024x1024 px.
+  image_path: "assets/icon/app_icon.png"
+
+  # --- Android ---
+  android: "launcher_icon"          # Nombre del recurso en mipmap
+  min_sdk_android: 21               # Ajusta si tu proyecto usa un minSdk mayor
+  
+  # Icono adaptativo (Android 8+ / 13+).
+  # Usamos el color blanco como fondo para la máscara.
+  adaptive_icon_background: "#FFFFFF"
+  
+  # Dejamos el foreground comentado porque no tienes la imagen separada aún.
+  # Si luego creas una imagen con el logo transparente y el fondo vacío, descomenta esta línea.
+  # adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+
+  # --- iOS ---
+  ios: true
+  remove_alpha_ios: true            # Apple rechaza transparencia en la App Store
+  background_color_ios: "#FFFFFF"   # Color de fondo por si la imagen tiene alpha
+
+  # --- Web ---
+  web:
+    generate: true                  # Habilita la generación para web/
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#FFFFFF"     # Campo background_color del manifest.json
+    theme_color: "#000000"          # Cambia a tu color hexadecimal real si lo deseas

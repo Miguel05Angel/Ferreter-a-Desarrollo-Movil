@@ -10,7 +10,7 @@ async function personal(request) {
     throw new HttpsError('unauthenticated', 'Inicia sesión.');
   }
 
-  const db = getFirestore('ferreteria-db');
+  const db = getFirestore(); 
   const usuarios = db.collection('usuarios');
   const perfil = await usuarios.doc(request.auth.uid).get();
   if (!['Administrador', 'Vendedor'].includes(perfil.get('rol')) ||
@@ -20,7 +20,7 @@ async function personal(request) {
   return { db, usuarios, perfil };
 }
 
-exports.registrarVendedor = onCall(async (request) => {
+exports.registrarVendedor = onCall({ region: 'southamerica-east1' }, async (request) => {
   const { usuarios, perfil } = await personal(request);
   if (perfil.get('rol') !== 'Administrador') {
     throw new HttpsError('permission-denied', 'Acceso reservado al administrador.');
@@ -56,8 +56,6 @@ exports.registrarVendedor = onCall(async (request) => {
     }
   }
 
-  // Sin perfil la cuenta no puede acceder. La misma operación permite
-  // terminar un alta interrumpida sin cambiar su contraseña ni su rol.
   const ref = usuarios.doc(uid);
   const datos = { dni, nombre: nombre.trim(), telefono, rol: 'Vendedor' };
   await ref.firestore.runTransaction(async (tx) => {
@@ -71,7 +69,7 @@ exports.registrarVendedor = onCall(async (request) => {
   return { uid };
 });
 
-exports.registrarVenta = onCall(async (request) => {
+exports.registrarVenta = onCall({ region: 'southamerica-east1' }, async (request) => {
   const { db, perfil } = await personal(request);
   const { id, clienteNombre, items, metodoPago, comprobante } = request.data ?? {};
   if (

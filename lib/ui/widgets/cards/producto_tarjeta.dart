@@ -10,8 +10,7 @@ import '../visual/tilt_3d.dart';
 
 /// Tarjeta del catalogo en cuadricula. Si el producto esta agotado toda la
 /// tarjeta pasa a escala de grises y aparece un triangulo de advertencia
-/// animado sobre la imagen. La solicitud de reposicion NO esta aqui: solo
-/// en la ficha del producto.
+/// animado sobre la imagen.
 class ProductoTarjeta extends StatelessWidget {
   final Producto producto;
   final Categoria categoria;
@@ -56,13 +55,17 @@ class ProductoTarjeta extends StatelessWidget {
                   children: [
                     Hero(
                       tag: 'producto-${producto.id}',
+                      // Mantenemos la animación simple para no forzar el ícono 3D
+                      // si el producto no tiene imágenes.
                       flightShuttleBuilder: (_, __, ___, ____, _____) =>
-                          FittedBox(
-                        child: ProductoEstatico(
-                          tipo: producto.tipoVisual,
-                          colorHex: producto.colorHex,
-                          size: 100,
-                          sombra: true,
+                          Material(
+                        color: Colors.transparent,
+                        child: Center(
+                          child: Text(
+                            producto.nombre,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
                         ),
                       ),
                       child: Container(
@@ -85,6 +88,7 @@ class ProductoTarjeta extends StatelessWidget {
                                 offset: Offset(t.dx * -7, t.dy * -7),
                                 child: Transform.scale(
                                   scale: 1 + t.distance * 0.12,
+                                  // AQUÍ OCURRIRÁ LA MAGIA EN CUANTO ME PASES EL CÓDIGO
                                   child: ProductoImagen(
                                       producto: producto, size: 84),
                                 ),
