@@ -80,6 +80,7 @@ class _EscenarioProductoState extends State<EscenarioProducto> {
         key: ValueKey('f-${widget.producto.codigo}'),
         child: GaleriaFotos(
           ids: media.fotos,
+          referencial: media.fotoReferencial,
         ),
       ),
     );

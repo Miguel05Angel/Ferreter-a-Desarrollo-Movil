@@ -26,7 +26,7 @@ class ProductoImagen extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.04),
+        color: Colors.black.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Colors.grey.shade400,
@@ -66,9 +66,10 @@ class ProductoImagen extends StatelessWidget {
 
     if (url == null) return fallback;
 
-    return SizedBox(
+    return Container(
       width: size,
       height: size,
+      color: Colors.white,
       child: CachedNetworkImage(
         imageUrl: url,
         fit: BoxFit.contain,

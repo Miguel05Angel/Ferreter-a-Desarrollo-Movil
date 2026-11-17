@@ -19,10 +19,13 @@ service cloud.firestore {
       allow get: if personal() && (request.auth.uid == uid || administrador());
       allow list: if administrador();
       allow update: if personal() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'fotoPerfil'])
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 3
-        && request.resource.data.nombre.size() <= 50;
+        && request.resource.data.nombre.size() <= 50
+        && (request.resource.data.get('fotoPerfil', null) == null
+          || (request.resource.data.fotoPerfil is bytes
+            && request.resource.data.fotoPerfil.size() <= 184320));
     }
 
     match /productos/{id} {

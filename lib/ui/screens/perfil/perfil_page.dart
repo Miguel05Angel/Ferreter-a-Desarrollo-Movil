@@ -17,6 +17,7 @@ import '../../widgets/feedback/confirm_dialog.dart';
 import '../../widgets/layout/section_header.dart';
 import '../../widgets/visual/decor_industrial.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../widgets/media/editor_foto_perfil.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -27,6 +28,34 @@ class PerfilPage extends StatefulWidget {
 
 class _PerfilPageState extends State<PerfilPage> {
   bool _notificaciones = true;
+
+  Future<void> _editarFoto() async {
+    final auth = context.read<AuthProvider>();
+    final usuario = auth.usuarioActual;
+    if (usuario == null) return;
+    final guardada = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: EditorFotoPerfil(
+            foto: usuario.fotoPerfil,
+            onGuardar: (foto) => auth.actualizarFotoPerfil(
+              foto,
+              usuarioId: usuario.id,
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || guardada != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Foto de perfil actualizada.')),
+    );
+  }
 
   Future<void> _editarNombre() async {
     final controller = TextEditingController(
@@ -76,7 +105,32 @@ class _PerfilPageState extends State<PerfilPage> {
     final tema = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: const AppBarTaller(subtitulo: 'Cuenta', title: Text('Mi perfil')),
+      appBar: AppBarTaller(
+        subtitulo: 'Cuenta',
+        title: const Text('Mi perfil'),
+        mostrarCarrito: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: IconButton(
+              tooltip: 'Cambiar foto de perfil',
+              onPressed: usuario == null ? null : _editarFoto,
+              style: IconButton.styleFrom(
+                foregroundColor: AppTheme.primary,
+                backgroundColor: AppTheme.grafito,
+                fixedSize: const Size(48, 48),
+                side: const BorderSide(color: AppTheme.primary, width: 1.5),
+                shape: const BeveledRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    bottomRight: Radius.circular(10),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.add_a_photo_outlined, size: 23),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -98,14 +152,24 @@ class _PerfilPageState extends State<PerfilPage> {
                             width: 68,
                             height: 68,
                             alignment: Alignment.center,
-                            decoration: const ShapeDecoration(
+                            clipBehavior: Clip.antiAlias,
+                            decoration: BoxDecoration(
                               color: AppTheme.primary,
-                              shape: BeveledRectangleBorder(
-                                borderRadius: BorderRadius.only(
-                                    bottomRight: Radius.circular(20)),
-                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.primary, width: 2),
                             ),
-                            child: Text(
+                            child: usuario?.fotoPerfil != null
+                                ? ClipOval(
+                                    child: Image.memory(
+                                      usuario!.fotoPerfil!,
+                                      width: 68,
+                                      height: 68,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.person_outline, size: 36),
+                                    ),
+                                  )
+                                : Text(
                               (usuario?.nombre.isNotEmpty ?? false)
                                   ? usuario!.nombre[0].toUpperCase()
                                   : '?',

@@ -16,7 +16,8 @@ class MediaService {
     if (id.startsWith('http')) {
       return id;
     }
-    return 'https://drive.google.com/thumbnail?id=$id&sz=w$ancho';
+    // Conserva la transparencia PNG; thumbnail puede convertirla a negro.
+    return 'https://lh3.googleusercontent.com/d/$id=w$ancho';
   }
 
   static String urlDescarga(String id) =>

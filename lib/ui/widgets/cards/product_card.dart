@@ -56,14 +56,7 @@ class ProductCard extends StatelessWidget {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          categoria.color.withValues(alpha: 0.10),
-                          categoria.color.withValues(alpha: 0.22),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     // Paralaje: la pieza "sale" de la tarjeta al tocarla
