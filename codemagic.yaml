@@ -28,7 +28,7 @@ workflows:
         # Debe coincidir con el Bundle ID registrado en Apple Developer y en
         # Firebase. Para publicar de verdad hay que cambiar com.example por un
         # dominio propio (ver docs/GUIA_13.md).
-        bundle_identifier: com.example.ferreteria_app
+        bundle_identifier: com.elconstructor.ferreteria_app
       groups:
         - firebase_ios
 

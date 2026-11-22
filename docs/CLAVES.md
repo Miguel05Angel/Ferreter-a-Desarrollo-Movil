@@ -123,46 +123,55 @@ antes ya no está.
 
 ---
 
-## Pendiente aparte: el `applicationId`
+## El `applicationId`: resuelto, con dos rezagados
 
-El proyecto todavía usa el identificador de plantilla de Flutter:
+Cuando se escribió este documento el proyecto usaba `com.example.ferreteria_app`,
+el placeholder de la plantilla de Flutter, que **Google Play rechaza**. Cambiarlo
+estaba bloqueado: el `google-services.json` declaraba el paquete viejo y el
+plugin de Google Services falla si no coinciden.
+
+**El 16 de noviembre Miguel lo resolvió** (PR #8). Movió el proyecto a un
+Firebase nuevo (`ferreteria-el-constructor`), registró ahí la app Android con el
+paquete definitivo y también la app Web, y actualizó el `google-services.json`.
+Android quedó alineado:
 
 ```
-applicationId = "com.example.ferreteria_app"   <- placeholder
+applicationId = "com.elconstructor.ferreteria_app"
 namespace     = "com.elconstructor.ferreteria_app"
 ```
 
-Están desalineados, y **`com.example.*` Google Play lo rechaza**: con ese
-identificador la app no se puede publicar nunca.
+Esto importa para las claves: la restricción del paso 1 se registra contra el
+nombre de paquete, así que hay que usar **`com.elconstructor.ferreteria_app`**.
+Si alguien alcanzó a registrar el `com.example`, esa restricción ya no sirve y
+hay que rehacerla.
 
-Importa para las claves porque la restricción del paso 1 se registra contra el
-nombre de paquete. Si se registra `com.example.ferreteria_app` y luego se
-cambia al definitivo, **los mapas dejan de cargar** y cuesta mucho dar con el
-motivo.
+### Los dos rezagados
 
-### Por qué no se arregla en esta rama
+El cambio se aplicó en Android pero no llegó a dos sitios. Se arreglan en esta
+rama:
 
-Cambiar el `applicationId` rompe el build, y no por nuestra culpa:
+| Archivo | Se quedó en |
+|---|---|
+| `codemagic.yaml` | `bundle_identifier: com.example.ferreteria_app` |
+| `lib/firebase_options.dart` | el mensaje de ayuda para registrar la app iOS |
 
-```
-android/app/google-services.json  ->  "package_name": "com.example.ferreteria_app"
-```
+El de `codemagic.yaml` no es cosmético: el build de iOS firmaría contra un
+identificador que ya no corresponde al proyecto.
 
-El plugin de Google Services compara ese valor con el `applicationId` y, si no
-coinciden, falla con `No matching client found for package name`.
+---
 
-Para cambiarlo hace falta, **en este orden**:
+## Verificación
 
-1. En Firebase Console → Configuración del proyecto → **Agregar app Android**
-   con el paquete `com.elconstructor.ferreteria_app`.
-2. Descargar el `google-services.json` nuevo y reemplazar el actual.
-3. Recién ahí cambiar el `applicationId` en `build.gradle.kts`.
-4. Y el `bundle_identifier` de `codemagic.yaml`, que también dice
-   `com.example.ferreteria_app`.
+No es teoría: se compiló un APK de debug en cada caso, con Flutter 3.47.9 y
+Gradle 9.3.1.
 
-El paso 1 solo lo puede hacer quien tenga acceso al proyecto de Firebase. El
-commit que hace los pasos 3 y 4 está en esta rama, **marcado y separado**: no
-hay que mergearlo hasta tener el `google-services.json` nuevo en su sitio.
+| Caso | Resultado |
+|---|---|
+| **Sin** `secrets.properties` | Compila. Manifiesto fusionado: `android:value=""` |
+| **Con** `secrets.properties` | Compila. Manifiesto fusionado: la clave real, sin rastro del placeholder |
+
+Lo que **no** se probó: ejecutar la app con un mapa en pantalla. Hace falta un
+dispositivo y una clave ya restringida.
 
 ---
 
