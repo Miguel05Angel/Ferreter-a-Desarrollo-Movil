@@ -1,4 +1,4 @@
-/// Validaciones reutilizables de toda la aplicacion.
+/// Validaciones reutilizables de toda la aplicación.
 class Validators {
   Validators._();
 
@@ -19,32 +19,32 @@ class Validators {
   }
 
   static String? email(String? valor) {
-    final base = requerido(valor, 'Ingresa tu correo electronico');
+    final base = requerido(valor, 'Ingresa tu correo electrónico');
     if (base != null) return base;
     final regex = RegExp(r'^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!regex.hasMatch(valor!.trim())) {
-      return 'Ingresa un correo valido (ejemplo@correo.com)';
+      return 'Ingresa un correo válido (ejemplo@correo.com)';
     }
     return null;
   }
 
   static String? password(String? valor) {
-    final base = requerido(valor, 'Ingresa tu contrasena');
+    final base = requerido(valor, 'Ingresa tu contraseña');
     if (base != null) return base;
     if (valor!.length < 6) {
-      return 'La contrasena debe tener al menos 6 caracteres';
+      return 'La contraseña debe tener al menos 6 caracteres';
     }
     if (!valor.contains(RegExp(r'[0-9]'))) {
-      return 'La contrasena debe incluir al menos un numero';
+      return 'La contraseña debe incluir al menos un número';
     }
     return null;
   }
 
   static String? confirmarPassword(String? valor, String passwordOriginal) {
-    final base = requerido(valor, 'Confirma tu contrasena');
+    final base = requerido(valor, 'Confirma tu contraseña');
     if (base != null) return base;
     if (valor != passwordOriginal) {
-      return 'Las contrasenas no coinciden';
+      return 'Las contraseñas no coinciden';
     }
     return null;
   }
@@ -53,10 +53,10 @@ class Validators {
     final base = requerido(valor, 'Ingresa el DNI');
     if (base != null) return base;
     if (!RegExp(r'^\d{8}$').hasMatch(valor!.trim())) {
-      return 'El DNI debe tener 8 digitos numericos';
+      return 'El DNI debe tener 8 dígitos numéricos';
     }
     if (valor.trim() == '00000000') {
-      return 'Ingresa un DNI valido';
+      return 'Ingresa un DNI válido';
     }
     return null;
   }
@@ -65,7 +65,7 @@ class Validators {
     final base = requerido(valor, 'Ingresa el RUC');
     if (base != null) return base;
     if (!RegExp(r'^\d{11}$').hasMatch(valor!.trim())) {
-      return 'El RUC debe tener 11 digitos numericos';
+      return 'El RUC debe tener 11 dígitos numéricos';
     }
     if (!RegExp(r'^(10|15|16|17|20)').hasMatch(valor.trim())) {
       return 'El RUC debe empezar con 10 o 20';
@@ -74,10 +74,10 @@ class Validators {
   }
 
   static String? telefono(String? valor) {
-    final base = requerido(valor, 'Ingresa el numero de telefono');
+    final base = requerido(valor, 'Ingresa el número de teléfono');
     if (base != null) return base;
     if (!RegExp(r'^9\d{8}$').hasMatch(valor!.trim())) {
-      return 'El celular debe tener 9 digitos y empezar con 9 (ej: 987654321)';
+      return 'El celular debe tener 9 dígitos y empezar con 9 (ej: 987654321)';
     }
     return null;
   }
@@ -88,10 +88,10 @@ class Validators {
   }
 
   static String? codigoProducto(String? valor) {
-    final base = requerido(valor, 'Ingresa el codigo del producto');
+    final base = requerido(valor, 'Ingresa el código del producto');
     if (base != null) return base;
     if (valor!.trim().length < 3) {
-      return 'El codigo debe tener al menos 3 caracteres';
+      return 'El código debe tener al menos 3 caracteres';
     }
     return null;
   }
@@ -101,7 +101,7 @@ class Validators {
     if (base != null) return base;
     final numero = double.tryParse(valor!.trim());
     if (numero == null) {
-      return 'Ingresa un valor numerico valido';
+      return 'Ingresa un valor numérico válido';
     }
     if (numero <= 0) {
       return 'El precio debe ser mayor a 0';
@@ -119,7 +119,7 @@ class Validators {
     if (base != null) return base;
     final numero = int.tryParse(valor!.trim());
     if (numero == null) {
-      return 'Ingresa un numero entero valido';
+      return 'Ingresa un número entero válido';
     }
     if (numero < 0) {
       return 'El stock no puede ser negativo';
@@ -138,10 +138,10 @@ class Validators {
   }
 
   static String? direccion(String? valor) {
-    final base = requerido(valor, 'Ingresa la direccion');
+    final base = requerido(valor, 'Ingresa la dirección');
     if (base != null) return base;
     if (valor!.trim().length < 5) {
-      return 'Ingresa una direccion mas completa';
+      return 'Ingresa una dirección más completa';
     }
     return null;
   }
