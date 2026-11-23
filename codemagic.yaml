@@ -25,10 +25,12 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        # Debe coincidir con el Bundle ID registrado en Apple Developer y en
-        # Firebase. Para publicar de verdad hay que cambiar com.example por un
-        # dominio propio (ver docs/GUIA_13.md).
-        bundle_identifier: com.example.ferreteria_app
+        # Es el Bundle ID de iOS, que no es el applicationId de Android: el de
+        # Android lleva guion bajo (com.elconstructor.ferreteria_app) y el de
+        # iOS guion medio. Debe coincidir con el BUNDLE_ID de
+        # ios/Runner/GoogleService-Info.plist y con el PRODUCT_BUNDLE_IDENTIFIER
+        # del target Runner en Xcode (ver docs/GUIA_13.md).
+        bundle_identifier: com.elconstructor.ferreteria-app
       groups:
         - firebase_ios
 

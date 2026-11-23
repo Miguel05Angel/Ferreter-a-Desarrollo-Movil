@@ -30,9 +30,9 @@ class DefaultFirebaseOptions {
         return android;
       case TargetPlatform.iOS:
         throw UnsupportedError(
-          'Falta registrar la app iOS en Firebase Console.\n'
-          'El Bundle ID debe ser el mismo que el applicationId de Android: '
-          'com.example.ferreteria_app\n'
+          'Faltan las opciones de iOS en este archivo.\n'
+          'El Bundle ID de iOS es com.elconstructor.ferreteria-app (guion '
+          'medio), y no es el applicationId de Android, que lleva guion bajo.\n'
           'Despues ejecuta: flutterfire configure',
         );
       default:
