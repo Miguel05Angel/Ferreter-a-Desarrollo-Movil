@@ -1,7 +1,7 @@
 name: ferreteria_app
 description: Sistema de gestion para ferreteria - productos, ventas, clientes, proveedores y cotizaciones.
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+7
 
 environment:
   # firebase_core 5.x y cloud_firestore 7.x exigen este minimo.
@@ -46,3 +46,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/productos/
+    - assets/productos/mini/

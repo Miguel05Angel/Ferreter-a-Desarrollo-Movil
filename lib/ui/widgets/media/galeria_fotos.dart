@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'imagen_catalogo.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -7,8 +7,13 @@ import '../../../services/media_service.dart';
 class GaleriaFotos extends StatefulWidget {
   final List<String> ids;
   final bool referencial;
+  final String? respaldoUrl;
 
-  const GaleriaFotos({super.key, required this.ids, this.referencial = false});
+  const GaleriaFotos(
+      {super.key,
+      required this.ids,
+      this.referencial = false,
+      this.respaldoUrl});
 
   @override
   State<GaleriaFotos> createState() => _GaleriaFotosState();
@@ -27,7 +32,7 @@ class _GaleriaFotosState extends State<GaleriaFotos> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: Colors.white,
+      color: Colors.transparent,
       child: Stack(
         children: [
           PageView.builder(
@@ -39,21 +44,13 @@ class _GaleriaFotosState extends State<GaleriaFotos> {
               final urlReal =
                   MediaService.urlImagen(widget.ids[i], ancho: 1200);
 
-
               return InteractiveViewer(
                 minScale: 1,
                 maxScale: 4,
-                child: CachedNetworkImage(
+                child: ImagenCatalogo(
                   imageUrl: urlReal,
+                  respaldoUrl: i == 0 ? widget.respaldoUrl : null,
                   fit: BoxFit.contain,
-                  placeholder: (_, __) =>
-                      const Center(child: CircularProgressIndicator()),
-                  errorWidget: (context, url, error) {
-                    return const Center(
-                      child: Icon(Icons.broken_image_outlined,
-                          size: 48, color: Colors.black38),
-                    );
-                  },
                 ),
               );
             },

@@ -237,7 +237,7 @@ class AdminStore extends ChangeNotifier {
       notifyListeners();
     }));
 
-    final db = FirebaseFirestore.instance;
+    final db = FirestoreService.instance.db;
 
     _subs.add(db.collection(colUsuarios).snapshots().listen((snap) {
       final lista = [for (final d in snap.docs) Trabajador.desde(d.id, d.data())];
@@ -306,7 +306,7 @@ class AdminStore extends ChangeNotifier {
         .where((i) => i.eliminadoEn != null && i.eliminadoEn!.isBefore(limite))
         .toList();
     if (vencidos.isEmpty) return 0;
-    final batch = FirebaseFirestore.instance.batch();
+    final batch = FirestoreService.instance.db.batch();
     for (final i in vencidos) {
       batch.delete(_prod.doc(i.id));
     }

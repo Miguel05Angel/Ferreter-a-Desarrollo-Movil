@@ -1,19 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/producto.dart';
 import '../../../providers/media_provider.dart';
+import 'imagen_catalogo.dart';
 
-/// Imagen del producto: usa la fotografia real de Google Drive cuando existe.
-/// Si no hay foto, muestra un aviso visual de "FALTA IMAGEN" en lugar de la
-/// ilustracion 3D para alertar al administrador.
+/// Foto local inmediata, con respaldo para las actualizaciones remotas.
 class ProductoImagen extends StatelessWidget {
-  final Producto producto;
-  final double size;
-  final bool
-      sombra; // Mantenemos el parametro por compatibilidad, aunque ya no se use
-
   const ProductoImagen({
     super.key,
     required this.producto,
@@ -21,64 +14,29 @@ class ProductoImagen extends StatelessWidget {
     this.sombra = false,
   });
 
-  /// Widget de respaldo cuando no hay foto real en el sistema.
-  Widget _faltaImagen() {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.grey.shade400,
-          width: 1,
-          style: BorderStyle.solid,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.image_not_supported_outlined,
-            size: size * 0.35,
-            color: Colors.grey.shade500,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'FALTA\nIMAGEN',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: size * 0.13,
-              fontWeight: FontWeight.w800,
-              color: Colors.grey.shade600,
-              height: 1.1,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  final Producto producto;
+  final double size;
+  final bool sombra;
 
   @override
   Widget build(BuildContext context) {
-    final url = context.watch<MediaProvider>().miniatura(producto.codigo);
-    final fallback = _faltaImagen();
+    final media = context.watch<MediaProvider>();
+    final respaldo = media.fotoLocal(producto.codigo);
+    final url = media.miniatura(producto.codigo) ?? respaldo;
 
-    if (url == null) return fallback;
-
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
-      color: Colors.white,
-      child: CachedNetworkImage(
-        imageUrl: url,
-        memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).ceil(),
-        fit: BoxFit.contain,
-        fadeInDuration: const Duration(milliseconds: 250),
-        placeholder: (_, __) => fallback,
-        errorWidget: (_, __, ___) => fallback,
-      ),
+      child: url == null
+          ? null
+          : ImagenCatalogo(
+              imageUrl: url,
+              respaldoUrl: respaldo,
+              width: size,
+              height: size,
+              memCacheWidth:
+                  (size * MediaQuery.devicePixelRatioOf(context)).ceil(),
+            ),
     );
   }
 }

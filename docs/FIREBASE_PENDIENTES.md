@@ -2,7 +2,7 @@
 
 El código incluye fotos sin fondo negro y administración de usuarios desde la
 app: editar nombre/teléfono, cambiar la contraseña propia, restablecer la de otra
-cuenta y eliminar usuarios. Este commit no publica reglas ni funciones en Firebase.
+cuenta y eliminar usuarios. Esta subida no despliega funciones; las reglas de precios ya se corrigieron el 24/11/2026.
 No hace falta generar un APK para hacer la configuración pendiente.
 
 ## 1. Actualizar el proyecto
@@ -23,35 +23,16 @@ Conservar los cambios locales propios antes de actualizar. La app usa el proyect
 `usuarios/{uid}`, donde el ID del documento coincide con el UID de Authentication.
 El acceso con DNI usa internamente `DNI@acceso.ferreteria.invalid`.
 
-## 2. Permiso de edición de usuarios
+## 2. Estado de las reglas (24/11/2026)
 
-Respaldar las reglas que están publicadas actualmente. Dentro de
-`match /usuarios/{uid}`, agregar el permiso de edición administrativa contenido
-en `firestore.rules`, conservando los permisos vigentes de los demás módulos:
+El archivo `firestore.rules` ahora refleja las reglas vigentes en Firebase,
+incluida la edición de precios por administradores y la lectura administrativa
+de pedidos. La corrección de precios ya fue publicada y comprobada con 19
+pruebas de permisos en emuladores. Esta subida no hace otro despliegue.
 
-```text
-allow update: if administrador()
-  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono'])
-  && request.resource.data.nombre is string
-  && request.resource.data.nombre.size() >= 3
-  && request.resource.data.nombre.size() <= 50
-  && request.resource.data.telefono is string
-  && (request.resource.data.telefono == ''
-    || request.resource.data.telefono.matches('^9[0-9]{8}$'));
-```
-
-`administrador()` debe comprobar la sesión y el rol real del perfil, como en el
-archivo local. No habilitar cambios de DNI/rol ni eliminación directa de perfiles
-desde el cliente. Si las reglas publicadas ya cubren este permiso, no duplicarlo.
-
-Solo después de reconciliar el archivo local con las reglas vigentes:
-
-```powershell
-firebase deploy --only firestore:rules --project ferreteria-el-constructor
-```
-
-No reemplazar las reglas del servidor con el archivo local sin compararlas:
-pueden existir permisos adicionales de clientes, proveedores, pedidos u otros módulos.
+Consultar [las mejoras y sus pruebas](CAMBIOS_WEB_APP_20261124.md). Antes de
+cualquier despliegue futuro, respaldar y comparar las reglas publicadas;
+no reemplazarlas con una versión antigua de este archivo.
 
 ## 3. Publicar las dos funciones nuevas
 

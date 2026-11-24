@@ -16,39 +16,74 @@ service cloud.firestore {
     }
 
     match /usuarios/{uid} {
-      allow get: if personal() && (request.auth.uid == uid || administrador());
-      allow list: if administrador();
-      // El administrador edita datos de contacto, nunca la identidad o el rol.
-      allow update: if administrador()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono'])
+      // Solo el administrador registra perfiles nuevos de vendedores.
+      allow create: if administrador()
+        && request.resource.data.keys().hasAll(['dni', 'nombre', 'telefono', 'rol'])
+        && request.resource.data.keys().hasOnly(['dni', 'nombre', 'telefono', 'rol'])
+        && request.resource.data.rol == 'Vendedor'
+        && request.resource.data.dni is string
+        && request.resource.data.dni.matches('^[0-9]{8}$')
+        && request.resource.data.dni != '00000000'
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 3
         && request.resource.data.nombre.size() <= 50
         && request.resource.data.telefono is string
-        && (request.resource.data.telefono == ''
-          || request.resource.data.telefono.matches('^9[0-9]{8}$'));
+        && request.resource.data.telefono.matches('^9[0-9]{8}$');
+
+      allow get: if personal() && (request.auth.uid == uid || administrador());
+      allow list: if administrador();
+
+      // 1. Un usuario normal editando su propio perfil (solo nombre y teléfono)
       allow update: if personal() && request.auth.uid == uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'fotoPerfil'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono'])
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 3
-        && request.resource.data.nombre.size() <= 50
-        && (request.resource.data.get('fotoPerfil', null) == null
-          || (request.resource.data.fotoPerfil is bytes
-            && request.resource.data.fotoPerfil.size() <= 184320));
+        && request.resource.data.nombre.size() <= 50;
+
+      // 2. Un administrador editando a CUALQUIER usuario
+      // (Permitimos editar nombre, teléfono, rol y si está activo)
+      allow update: if administrador()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono', 'rol', 'activo']);
+
+      // Permite a los administradores borrar usuarios
+      allow delete: if administrador();
+    }
+
+    match /pedidos_proveedor/{id} {
+      allow read: if administrador();
     }
 
     match /productos/{id} {
       allow read: if personal();
-      allow write: if administrador();
+      // El administrador edita la ficha comercial y la visibilidad del producto.
+      allow update: if administrador();
+      // Permite a cualquier personal actualizar SOLO el stock
+      allow update: if personal()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock'])
+        && request.resource.data.stock is int
+        && request.resource.data.stock >= 0;
+      // Solo administradores pueden crear o eliminar productos
+      allow create, delete: if administrador();
     }
 
     match /ventas/{id} {
+      // Leer sus propias ventas (si es vendedor) o todas (si es admin)
       allow read: if administrador()
         || (personal() && resource.data.vendedorId == request.auth.uid);
+
+      // Permitir crear la venta
+      allow create: if personal()
+        && request.resource.data.vendedorId == request.auth.uid
+        && request.resource.data.estado == 'Completada';
+
+      // (Opcional) Si necesitas anular ventas en el futuro
+      allow update, delete: if administrador();
     }
 
-    match /_meta/catalogo {
-      allow read, write: if administrador();
+    // Atrapa todas las rutas dentro de _meta (ej. catalogo, ventas-B001, ventas-F001)
+    match /_meta/{documento} {
+      allow read: if personal();
+      allow write: if personal();
     }
   }
 }

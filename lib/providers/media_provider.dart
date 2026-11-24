@@ -15,6 +15,14 @@ class MediaProvider extends ChangeNotifier {
 
   EstadoMedia get estado => _estado;
 
+  /// Foto incluida en la instalación, independiente del manifiesto remoto.
+  String? fotoLocal(String codigo) {
+    final key = codigo.trim().toUpperCase();
+    final id = fotosReferenciaDrive[key] ??
+        catalogoFotosDrive[equivalenciasFotosDrive[key] ?? key];
+    return id == null ? null : MediaService.urlImagen(id);
+  }
+
   ProductoMedia? de(String codigo) {
     // Forzamos mayúsculas y quitamos espacios para evitar fallos de coincidencia
     final key = codigo.trim().toUpperCase();
@@ -23,12 +31,14 @@ class MediaProvider extends ChangeNotifier {
     final remoto = _mapa[key];
     final codigoFoto = equivalenciasFotosDrive[key] ?? key;
     final referencia = fotosReferenciaDrive[key];
-    final fotoDrive = referencia ?? catalogoFotosDrive[codigoFoto];
+    final fotoDrive = remoto?.tieneFotos == true
+        ? remoto!.fotos.first
+        : referencia ?? catalogoFotosDrive[codigoFoto];
     final m = fotoDrive == null
         ? remoto
         : ProductoMedia(
             codigo: key,
-            fotos: [fotoDrive],
+            fotos: remoto?.tieneFotos == true ? remoto!.fotos : [fotoDrive],
             fotoReferencial: referencia != null,
             modelo3d: remoto?.modelo3d,
             giro360: remoto?.giro360 ?? const [],
