@@ -18,6 +18,15 @@ service cloud.firestore {
     match /usuarios/{uid} {
       allow get: if personal() && (request.auth.uid == uid || administrador());
       allow list: if administrador();
+      // El administrador edita datos de contacto, nunca la identidad o el rol.
+      allow update: if administrador()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'telefono'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 3
+        && request.resource.data.nombre.size() <= 50
+        && request.resource.data.telefono is string
+        && (request.resource.data.telefono == ''
+          || request.resource.data.telefono.matches('^9[0-9]{8}$'));
       allow update: if personal() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'fotoPerfil'])
         && request.resource.data.nombre is string

@@ -20,6 +20,98 @@ async function personal(request) {
   return { db, usuarios, perfil };
 }
 
+// La contraseña se modifica en Authentication, nunca se guarda en Firestore.
+exports.restablecerPasswordUsuario = onCall({ region: 'southamerica-east1' }, async (request) => {
+  const { usuarios, perfil } = await personal(request);
+  if (perfil.get('rol') !== 'Administrador') {
+    throw new HttpsError('permission-denied', 'Acceso reservado al administrador.');
+  }
+  const authTime = request.auth.token.auth_time;
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(authTime) || now - authTime > 300 || authTime > now + 30) {
+    throw new HttpsError('failed-precondition', 'Confirma de nuevo tu contraseña actual.');
+  }
+  const { usuarioId, nuevaPassword } = request.data ?? {};
+  if (typeof usuarioId !== 'string' || !usuarioId || usuarioId.length > 128 ||
+      usuarioId.includes('/') || typeof nuevaPassword !== 'string' ||
+      nuevaPassword.length < 6 || nuevaPassword.length > 20 || !/[0-9]/.test(nuevaPassword)) {
+    throw new HttpsError('invalid-argument', 'Datos de contraseña inválidos.');
+  }
+  if (usuarioId === request.auth.uid) {
+    throw new HttpsError('invalid-argument', 'Usa Cambiar mi contraseña para tu propia cuenta.');
+  }
+  const destino = await usuarios.doc(usuarioId).get();
+  if (!destino.exists || !['Administrador', 'Vendedor'].includes(destino.get('rol')) ||
+      typeof destino.get('dni') !== 'string' || !/^[0-9]{8}$/.test(destino.get('dni'))) {
+    throw new HttpsError('not-found', 'No se encontró la cuenta de personal.');
+  }
+  const auth = getAuth();
+  try {
+    const cuenta = await auth.getUser(usuarioId);
+    if (cuenta.disabled || cuenta.email !== destino.get('dni') + '@acceso.ferreteria.invalid') {
+      throw new HttpsError('failed-precondition', 'La cuenta no está habilitada o no coincide con el perfil.');
+    }
+    await auth.updateUser(usuarioId, { password: nuevaPassword });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    if (error.code === 'auth/user-not-found') {
+      throw new HttpsError('not-found', 'No se encontró la cuenta.');
+    }
+    if (['auth/invalid-password', 'auth/password-does-not-meet-requirements'].includes(error.code)) {
+      throw new HttpsError('invalid-argument', 'La contraseña no cumple los requisitos.');
+    }
+    // No incluir request.data ni el error del proveedor en los registros.
+    throw new HttpsError('internal', 'No se pudo restablecer la contraseña.');
+  }
+  return { usuarioId };
+});
+
+exports.eliminarUsuario = onCall({ region: 'southamerica-east1' }, async (request) => {
+  const { usuarios, perfil } = await personal(request);
+  if (perfil.get('rol') !== 'Administrador') {
+    throw new HttpsError('permission-denied', 'Acceso reservado al administrador.');
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const authTime = request.auth.token.auth_time;
+  if (!Number.isFinite(authTime) || now - authTime > 300 || authTime > now + 30) {
+    throw new HttpsError('failed-precondition', 'Confirma de nuevo tu contraseña actual.');
+  }
+  const { usuarioId } = request.data ?? {};
+  if (typeof usuarioId !== 'string' || !usuarioId || usuarioId.length > 128 || usuarioId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'Usuario inválido.');
+  }
+  if (usuarioId === request.auth.uid) {
+    throw new HttpsError('failed-precondition', 'No puedes eliminar tu propia cuenta.');
+  }
+  const ref = usuarios.doc(usuarioId);
+  const destino = await ref.get();
+  if (!destino.exists) {
+    // Una segunda petición tras perder la respuesta puede repetirse sin efectos.
+    return { usuarioId, yaEliminado: true };
+  }
+  if (!['Administrador', 'Vendedor'].includes(destino.get('rol')) ||
+      typeof destino.get('dni') !== 'string' || !/^[0-9]{8}$/.test(destino.get('dni'))) {
+    throw new HttpsError('failed-precondition', 'El perfil no corresponde a una cuenta de personal.');
+  }
+  const auth = getAuth();
+  try {
+    let cuenta;
+    try { cuenta = await auth.getUser(usuarioId); }
+    catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
+    if (cuenta && cuenta.email !== destino.get('dni') + '@acceso.ferreteria.invalid') {
+      throw new HttpsError('failed-precondition', 'La cuenta no coincide con el perfil.');
+    }
+    // Primero quitar el acceso. Si falla Firestore, una repetición termina la limpieza.
+    if (cuenta) await auth.deleteUser(usuarioId);
+    await ref.delete();
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'No se pudo confirmar la eliminación. Actualiza la lista antes de reintentar.');
+  }
+  // Las ventas históricas y los demás documentos no se eliminan.
+  return { usuarioId, yaEliminado: false };
+});
+
 exports.registrarVendedor = onCall({ region: 'southamerica-east1' }, async (request) => {
   const { usuarios, perfil } = await personal(request);
   if (perfil.get('rol') !== 'Administrador') {

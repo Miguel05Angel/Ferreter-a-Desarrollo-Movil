@@ -49,6 +49,13 @@ class Validators {
     return null;
   }
 
+  static String? nuevaPassword(String? valor) {
+    final error = password(valor);
+    if (error != null) return error;
+    if (valor!.length > 20) return 'Usa como máximo 20 caracteres';
+    return null;
+  }
+
   static String? dni(String? valor) {
     final base = requerido(valor, 'Ingresa el DNI');
     if (base != null) return base;

@@ -18,12 +18,14 @@ void main() {
     final media = MediaProvider();
     for (final entry in catalogoFotosDrive.entries) {
       final uri = Uri.parse(media.miniatura(' ${entry.key.toLowerCase()} ')!);
-      expect(uri.host, 'lh3.googleusercontent.com');
-      expect(uri.path, '/d/${entry.value}=w500');
+      expect(uri.host, 'drive.usercontent.google.com');
+      expect(uri.path, '/download');
+      expect(uri.queryParameters['id'], entry.value);
+      expect(uri.queryParameters['export'], 'download');
     }
     for (final entry in equivalenciasFotosDrive.entries) {
       final uri = Uri.parse(media.miniatura(entry.key)!);
-      expect(uri.path, '/d/${catalogoFotosDrive[entry.value]}=w500');
+      expect(uri.queryParameters['id'], catalogoFotosDrive[entry.value]);
     }
     // La cinta métrica usa su referencia nueva, nunca la cinta adhesiva mal archivada.
     expect(catalogoFotosDrive['HER-005'], isNull);
@@ -41,7 +43,7 @@ void main() {
       final recurso = media.de(producto.codigo);
       expect(recurso?.tieneFotos, isTrue, reason: producto.codigo);
       expect(media.miniatura(producto.codigo),
-          startsWith('https://lh3.googleusercontent.com/'));
+          startsWith('https://drive.usercontent.google.com/download?'));
       expect(recurso!.fotoReferencial,
           fotosReferenciaDrive.containsKey(producto.codigo));
     }

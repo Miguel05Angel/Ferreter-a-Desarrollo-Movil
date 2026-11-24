@@ -34,6 +34,7 @@ class Usuario {
 
   Usuario copyWith({
     String? nombre,
+    String? telefono,
     Uint8List? fotoPerfil,
     bool quitarFoto = false,
   }) =>
@@ -41,7 +42,7 @@ class Usuario {
         id: id,
         dni: dni,
         nombre: nombre ?? this.nombre,
-        telefono: telefono,
+        telefono: telefono ?? this.telefono,
         rol: rol,
         fotoPerfil: quitarFoto ? null : fotoPerfil ?? this.fotoPerfil,
       );

@@ -12,6 +12,7 @@ import '../../../providers/carrito_provider.dart';
 import '../../../providers/cotizacion_borrador_provider.dart';
 import '../../../providers/theme_provider.dart';
 import 'usuarios_screen.dart';
+import 'password_usuario_screen.dart';
 import '../../widgets/animations/fade_slide.dart';
 import '../../widgets/feedback/confirm_dialog.dart';
 import '../../widgets/layout/section_header.dart';
@@ -156,7 +157,8 @@ class _PerfilPageState extends State<PerfilPage> {
                             decoration: BoxDecoration(
                               color: AppTheme.primary,
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppTheme.primary, width: 2),
+                              border:
+                                  Border.all(color: AppTheme.primary, width: 2),
                             ),
                             child: usuario?.fotoPerfil != null
                                 ? ClipOval(
@@ -165,19 +167,20 @@ class _PerfilPageState extends State<PerfilPage> {
                                       width: 68,
                                       height: 68,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          const Icon(Icons.person_outline, size: 36),
+                                      errorBuilder: (_, __, ___) => const Icon(
+                                          Icons.person_outline,
+                                          size: 36),
                                     ),
                                   )
                                 : Text(
-                              (usuario?.nombre.isNotEmpty ?? false)
-                                  ? usuario!.nombre[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  fontSize: 32,
-                                  color: AppTheme.grafito,
-                                  fontWeight: FontWeight.w900),
-                            ),
+                                    (usuario?.nombre.isNotEmpty ?? false)
+                                        ? usuario!.nombre[0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                        fontSize: 32,
+                                        color: AppTheme.grafito,
+                                        fontWeight: FontWeight.w900),
+                                  ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -242,8 +245,7 @@ class _PerfilPageState extends State<PerfilPage> {
                 ListTile(
                   leading: const Icon(Icons.dark_mode_outlined),
                   title: const Text('Modo oscuro'),
-                  subtitle: const Text(
-                      'Reduce el brillo para usar de noche'),
+                  subtitle: const Text('Reduce el brillo para usar de noche'),
                   trailing: Switch(
                     value: tema.esModoOscuro,
                     onChanged: (v) => tema.alternarTema(v),
@@ -253,12 +255,10 @@ class _PerfilPageState extends State<PerfilPage> {
                 ListTile(
                   leading: const Icon(Icons.notifications_outlined),
                   title: const Text('Notificaciones'),
-                  subtitle:
-                      const Text('Alertas de stock y recordatorios'),
+                  subtitle: const Text('Alertas de stock y recordatorios'),
                   trailing: Switch(
                     value: _notificaciones,
-                    onChanged: (v) =>
-                        setState(() => _notificaciones = v),
+                    onChanged: (v) => setState(() => _notificaciones = v),
                   ),
                 ),
               ],
@@ -270,7 +270,8 @@ class _PerfilPageState extends State<PerfilPage> {
               child: ListTile(
                 leading: const Icon(Icons.manage_accounts_outlined),
                 title: const Text('Usuarios'),
-                subtitle: const Text('Registrar y consultar vendedores'),
+                subtitle:
+                    const Text('Editar usuarios y restablecer contraseñas'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => AppRoutes.push(context, const UsuariosScreen()),
               ),
@@ -286,6 +287,16 @@ class _PerfilPageState extends State<PerfilPage> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _editarNombre,
                 ),
+                if (usuario?.rol == 'Administrador') ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.lock_reset),
+                    title: const Text('Cambiar mi contraseña'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => AppRoutes.push(
+                        context, PasswordUsuarioScreen(usuario: usuario!)),
+                  ),
+                ],
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.phone_outlined),
@@ -306,8 +317,7 @@ class _PerfilPageState extends State<PerfilPage> {
                 const ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('Acerca de'),
-                  subtitle: Text(
-                      '${AppConstants.nombreApp} - v1.0.0'),
+                  subtitle: Text('${AppConstants.nombreApp} - v1.0.0'),
                 ),
               ],
             ),
@@ -331,7 +341,7 @@ class _PerfilPageState extends State<PerfilPage> {
                     final auth = context.read<AuthProvider>();
                     final carrito = context.read<CarritoProvider>();
                     final borrador = context.read<CotizacionBorradorProvider>();
-               await auth.cerrarSesion();
+                    await auth.cerrarSesion();
                     carrito.limpiar();
                     borrador.limpiar();
                     if (!context.mounted) return;
@@ -352,7 +362,6 @@ class _PerfilPageState extends State<PerfilPage> {
   }
 }
 
-
 class _BiselClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
@@ -369,7 +378,6 @@ class _BiselClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_BiselClipper oldClipper) => false;
 }
-
 
 /// Lista de lo que el rol actual puede y no puede hacer.
 class _TarjetaPermisos extends StatelessWidget {
@@ -404,9 +412,8 @@ class _TarjetaPermisos extends StatelessWidget {
                       fontSize: 11,
                       letterSpacing: 1.6,
                       fontWeight: FontWeight.w900,
-                      color: permisos.esAdmin
-                          ? AppTheme.grafito
-                          : AppTheme.hueso,
+                      color:
+                          permisos.esAdmin ? AppTheme.grafito : AppTheme.hueso,
                     ),
                   ),
                 ),
@@ -451,12 +458,9 @@ class _TarjetaPermisos extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 13.5,
                             height: 1.25,
-                            color: lista[i].$2
-                                ? null
-                                : Colors.grey.shade500,
-                            decoration: lista[i].$2
-                                ? null
-                                : TextDecoration.lineThrough,
+                            color: lista[i].$2 ? null : Colors.grey.shade500,
+                            decoration:
+                                lista[i].$2 ? null : TextDecoration.lineThrough,
                           ),
                         ),
                       ),
