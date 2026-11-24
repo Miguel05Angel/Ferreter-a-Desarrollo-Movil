@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
 import '../data/firestore_mappers.dart';
+import '../data/producto_visible.dart';
 import '../data/mock_data.dart';
 import '../data/models/categoria.dart';
 import '../data/models/producto.dart';
@@ -54,6 +55,7 @@ class ProductoProvider extends ChangeNotifier {
           return porFecha == 0 ? a.id.compareTo(b.id) : porFecha;
         });
       _productos = docs
+          .where((doc) => productoVisible(doc.data()))
           .map((doc) => Mapeadores.productoDesde(doc.id, doc.data()))
           .toList();
       cargando = false;

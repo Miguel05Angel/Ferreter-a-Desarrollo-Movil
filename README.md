@@ -53,3 +53,8 @@ lib/
 
 La [guía de la práctica 11](docs/GUIA_11_FIREBASE.md) explica cómo crear el
 primer administrador, probar el flujo local y activar el proyecto compartido.
+
+
+## Últimas mejoras de web y app
+
+Ver [carga local de PNG, sincronización y permisos de precios](docs/CAMBIOS_WEB_APP_20261124.md).

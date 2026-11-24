@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../data/models/producto.dart';
 import 'admin_store.dart';
+import 'admin_producto_imagen.dart';
 import 'admin_ui.dart';
 import 'alertas_stock.dart';
 import 'calendario_rango.dart';
@@ -243,7 +244,7 @@ class _ProductosTabState extends State<ProductosTab> {
                     maxCrossAxisExtent: 272,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    mainAxisExtent: 238,
+                    mainAxisExtent: 258,
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, k) {
@@ -610,7 +611,7 @@ class _TarjetaProducto extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              height: 92,
+              height: 112,
               decoration: BoxDecoration(
                 color: color.withOpacity(apagado ? 0.07 : 0.14),
                 borderRadius:
@@ -618,14 +619,12 @@ class _TarjetaProducto extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  Center(
-                    child: Text(
-                      inicial(p.nombre),
-                      style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -2,
-                        color: color.withOpacity(apagado ? 0.45 : 0.85),
+                  Positioned.fill(
+                    top: 28,
+                    bottom: 6,
+                    child: Center(
+                      child: AdminProductoImagen(
+                        codigo: p.codigo, nombre: p.nombre, tamano: 78,
                       ),
                     ),
                   ),
@@ -822,8 +821,6 @@ class _FilaTablaState extends State<_FilaTabla> {
   Widget build(BuildContext context) {
     final i = widget.item;
     final p = i.p;
-    final color = _colorProducto(p);
-
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _h = true),
@@ -855,22 +852,8 @@ class _FilaTablaState extends State<_FilaTabla> {
                     flex: 5,
                     child: Row(
                       children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: color.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            inicial(p.nombre),
-                            style: TextStyle(
-                              color: color,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
+                        AdminProductoImagen(
+                          codigo: p.codigo, nombre: p.nombre, tamano: 36,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1247,22 +1230,8 @@ class _DetalleProductoState extends State<DetalleProducto> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      inicial(p.nombre),
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 26,
-                      ),
-                    ),
+                  AdminProductoImagen(
+                    codigo: p.codigo, nombre: p.nombre, tamano: 54,
                   ),
                   const SizedBox(width: 16),
                   Expanded(

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:cached_network_image/cached_network_image.dart';
+import '../media/imagen_catalogo.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -335,7 +335,7 @@ class _VueloState extends State<_Vuelo> with SingleTickerProviderStateMixin {
             alignment: Alignment.center,
             transform: m,
             child: widget.imagenUrl != null
-                ? CachedNetworkImage(
+                ? ImagenCatalogo(
                     imageUrl: widget.imagenUrl!,
                     width: widget.tam,
                     height: widget.tam,

@@ -333,7 +333,11 @@ class _ProductoFormScreenState extends State<ProductoFormScreen> {
                           initialValue: _unidad,
                           decoration: const InputDecoration(
                               prefixIcon: Icon(Icons.straighten)),
-                          items: AppConstants.unidades
+                          items: <String>[
+                            ...AppConstants.unidades,
+                            if (!AppConstants.unidades.contains(_unidad))
+                              _unidad,
+                          ]
                               .map((u) => DropdownMenuItem(
                                   value: u, child: Text(u)))
                               .toList(),
