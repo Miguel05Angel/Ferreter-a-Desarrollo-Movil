@@ -6,6 +6,9 @@ import '../../../data/models/usuario.dart';
 import '../../../providers/auth_provider.dart';
 import '../../widgets/layout/appbar_taller.dart';
 import '../auth/register_screen.dart';
+import 'editar_usuario_screen.dart';
+import 'password_usuario_screen.dart';
+import 'eliminar_usuario_screen.dart';
 
 class UsuariosScreen extends StatefulWidget {
   const UsuariosScreen({super.key});
@@ -53,6 +56,39 @@ class _UsuariosScreenState extends State<UsuariosScreen> {
                         leading: const Icon(Icons.person_outline),
                         title: Text(usuario.nombre),
                         subtitle: Text('DNI ${usuario.dni} · ${usuario.rol}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: 'Editar usuario',
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: () => AppRoutes.push(
+                                context,
+                                EditarUsuarioScreen(usuario: usuario),
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              tooltip: 'Opciones de usuario',
+                              onSelected: (opcion) => AppRoutes.push(
+                                  context,
+                                  opcion == 'eliminar'
+                                      ? EliminarUsuarioScreen(usuario: usuario)
+                                      : PasswordUsuarioScreen(
+                                          usuario: usuario)),
+                              itemBuilder: (_) => [
+                                PopupMenuItem(
+                                    value: 'password',
+                                    child: Text(usuario.id == actual!.id
+                                        ? 'Cambiar mi contraseña'
+                                        : 'Restablecer contraseña')),
+                                if (usuario.id != actual.id)
+                                  const PopupMenuItem(
+                                      value: 'eliminar',
+                                      child: Text('Eliminar usuario')),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                   ],
                 );

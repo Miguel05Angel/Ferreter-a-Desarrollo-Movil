@@ -11,7 +11,8 @@ import '../../../providers/media_provider.dart';
 class ProductoImagen extends StatelessWidget {
   final Producto producto;
   final double size;
-  final bool sombra; // Mantenemos el parametro por compatibilidad, aunque ya no se use
+  final bool
+      sombra; // Mantenemos el parametro por compatibilidad, aunque ya no se use
 
   const ProductoImagen({
     super.key,
@@ -72,6 +73,7 @@ class ProductoImagen extends StatelessWidget {
       color: Colors.white,
       child: CachedNetworkImage(
         imageUrl: url,
+        memCacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).ceil(),
         fit: BoxFit.contain,
         fadeInDuration: const Duration(milliseconds: 250),
         placeholder: (_, __) => fallback,

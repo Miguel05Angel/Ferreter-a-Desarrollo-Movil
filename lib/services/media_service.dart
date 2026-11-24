@@ -16,8 +16,10 @@ class MediaService {
     if (id.startsWith('http')) {
       return id;
     }
-    // Conserva la transparencia PNG; thumbnail puede convertirla a negro.
-    return 'https://lh3.googleusercontent.com/d/$id=w$ancho';
+    // El servidor lh3 convierte incluso los PNG transparentes a JPEG con
+    // fondo negro. Descargar el original conserva el canal alfa y cambia
+    // la clave de caché de las miniaturas anteriores.
+    return urlDescarga(id);
   }
 
   static String urlDescarga(String id) =>
@@ -26,7 +28,7 @@ class MediaService {
   // El parámetro 't=' con la fecha actual obliga a Android a descargar el JSON nuevo, ignorando la caché vieja.
   static Uri get urlManifiesto => Uri.parse(
       'https://drive.usercontent.google.com/download?id=${AppConstants.idManifiestoMedia}&export=download&confirm=t&t=${DateTime.now().millisecondsSinceEpoch}');
-      
+
   static Future<Map<String, ProductoMedia>> cargarManifiesto() async {
     if (AppConstants.idManifiestoMedia.isEmpty) return {};
     try {
@@ -34,12 +36,13 @@ class MediaService {
         urlManifiesto,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-          'Cache-Control': 'no-cache, no-store, must-revalidate', // Evita la caché
+          'Cache-Control':
+              'no-cache, no-store, must-revalidate', // Evita la caché
           'Pragma': 'no-cache',
           'Expires': '0',
         },
       ).timeout(const Duration(seconds: 15));
-      
+
       if (r.statusCode != 200) {
         debugPrint('🚨 ERROR HTTP JSON: ${r.statusCode}');
         throw HttpException('Manifiesto: HTTP ${r.statusCode}');
@@ -48,10 +51,11 @@ class MediaService {
       final json = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
       final productos = (json['productos'] ?? json) as Map<String, dynamic>;
       final mapa = <String, ProductoMedia>{};
-      
+
       productos.forEach((codigo, valor) {
         if (valor is Map<String, dynamic>) {
-          mapa[codigo.trim().toUpperCase()] = ProductoMedia.fromJson(codigo, valor);
+          mapa[codigo.trim().toUpperCase()] =
+              ProductoMedia.fromJson(codigo, valor);
         }
       });
       return mapa;

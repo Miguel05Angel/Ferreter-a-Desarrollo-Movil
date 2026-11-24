@@ -4,6 +4,10 @@ Aplicacion de gestion para ferreteria desarrollada en Flutter, con
 arquitectura ordenada por capas, animaciones en toda la interfaz y
 validaciones completas en formularios.
 
+## Configuración pendiente de Firebase
+
+Para activar la edición de usuarios, el restablecimiento de contraseñas y la eliminación de cuentas, seguir [la guía para quien administra Firebase](docs/FIREBASE_PENDIENTES.md). El código de estas funciones está preparado; subir este repositorio no publica cambios en Firebase.
+
 ## Modulos
 
 - Autenticación: acceso con DNI y contraseña, con alta de vendedores desde el perfil del administrador.
